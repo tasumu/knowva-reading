@@ -199,9 +199,9 @@ Firestoreは**NoSQLドキュメントデータベース**であり、RDBとは�
 
 ### 1) 実行基盤（Agent Engine）
 **会話・ツール実行・セッション管理**
-- **Agent Framework: Agent Development Kit (ADK)** ← 採用予定
+- **Agent Framework: Agent Development Kit (ADK)**
+- **デプロイ先: Google Cloud Agent Engine**
 - LLM API: Gemini API / OpenAI API (GPT-4) / Anthropic Claude
-- その他Framework: LangChain / LangGraph（参考）
 - セッション管理: Firestore Session / Redis
 
 ### 2) 長期保存層（本丸）
@@ -210,7 +210,7 @@ Firestoreは**NoSQLドキュメントデータベース**であり、RDBとは�
 - 会話全文の完全保存
 
 **b) Firestore（解釈層）**
-- Firestore（または PostgreSQL / MongoDB）
+- Firestore
 - 読み返し用の要約・メモ・索引
 
 ### 3) 検索基盤（必要になってから）
@@ -222,9 +222,9 @@ Firestoreは**NoSQLドキュメントデータベース**であり、RDBとは�
 - 音声録音: Web Audio API / MediaRecorder API（Phase 2以降）
 
 ### バックエンド
-- Node.js / Python (FastAPI) / Go
-- バックグラウンドジョブ: Bull (Redis Queue) / Cloud Tasks / Celery（Phase 2以降）
+- **Python (FastAPI)**
+- バックグラウンドジョブ: Cloud Tasks / Celery（Phase 2以降）
 
 ### インフラ
-- Vercel / Cloud Run / Firebase Hosting
-- 非同期処理: Cloud Functions / Lambda（Phase 2以降）
+- **Google Cloud Agent Engine**
+- 非同期処理: Cloud Functions（Phase 2以降）
