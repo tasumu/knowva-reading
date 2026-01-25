@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
@@ -9,6 +11,8 @@ from knowva.middleware.firebase_auth import get_current_user
 from knowva.models.message import MessageCreate, MessageResponse
 from knowva.models.session import SessionCreate, SessionResponse
 from knowva.services import firestore
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -102,16 +106,30 @@ async def send_message(
     )
 
     response_text = ""
-    async for event in runner.run_async(
-        user_id=user["uid"],
-        session_id=session_id,
-        new_message=user_content,
-    ):
-        if event.is_final_response() and event.content and event.content.parts:
-            for part in event.content.parts:
-                if part.text:
-                    response_text = part.text
-                    break
+    try:
+        async for event in runner.run_async(
+            user_id=user["uid"],
+            session_id=session_id,
+            new_message=user_content,
+        ):
+            logger.debug(f"ADK event: {event}")
+            # テキスト応答を収集（最終応答以外も含む）
+            if event.content and event.content.parts:
+                for part in event.content.parts:
+                    if part.text:
+                        # 最終応答を優先、なければ途中の応答も使用
+                        if event.is_final_response():
+                            response_text = part.text
+                        elif not response_text:
+                            response_text = part.text
+    except Exception as e:
+        logger.error(f"ADK runner error: {e}", exc_info=True)
+        response_text = "申し訳ございません。エラーが発生しました。もう一度お試しください。"
+
+    # 応答がない場合のフォールバック
+    if not response_text:
+        logger.warning("No response text from ADK runner")
+        response_text = "申し訳ございません。応答を生成できませんでした。もう一度お試しください。"
 
     # AIの応答をFirestoreに保存
     ai_message = await firestore.save_message(
