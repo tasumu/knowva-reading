@@ -4,8 +4,9 @@ import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { apiClient } from "@/lib/api";
-import { Reading } from "@/lib/types";
+import { Reading, Session } from "@/lib/types";
 import { ChatInterface } from "@/components/chat/ChatInterface";
+import { ChatHistory } from "@/components/chat/ChatHistory";
 
 export default function ChatPage() {
   const params = useParams();
@@ -16,6 +17,7 @@ export default function ChatPage() {
   const sessionId = searchParams.get("sessionId");
 
   const [reading, setReading] = useState<Reading | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -23,17 +25,24 @@ export default function ChatPage() {
       router.push(`/readings/${readingId}`);
       return;
     }
-    async function fetchReading() {
+    async function fetchData() {
       try {
-        const data = await apiClient<Reading>(`/api/readings/${readingId}`);
-        setReading(data);
+        const [readingData, sessionsData] = await Promise.all([
+          apiClient<Reading>(`/api/readings/${readingId}`),
+          apiClient<Session[]>(`/api/readings/${readingId}/sessions`),
+        ]);
+        setReading(readingData);
+        
+        // 現在のセッションを取得
+        const currentSession = sessionsData.find((s) => s.id === sessionId);
+        setSession(currentSession || null);
       } catch {
         router.push("/home");
       } finally {
         setLoading(false);
       }
     }
-    fetchReading();
+    fetchData();
   }, [readingId, sessionId, router]);
 
   const handleEndSession = async () => {
@@ -47,6 +56,18 @@ export default function ChatPage() {
       alert(err instanceof Error ? err.message : "エラーが発生しました");
     }
   };
+
+  // セッションが終了しているかどうか
+  const isSessionEnded = session?.ended_at != null;
+
+  // セッションタイプのラベル
+  const sessionTypeLabel = session
+    ? {
+        before_reading: "📖 読書前",
+        during_reading: "📚 読書中",
+        after_reading: "✨ 読了後",
+      }[session.session_type]
+    : "";
 
   if (loading || !reading || !sessionId) {
     return <div className="text-center py-8 text-gray-500">読み込み中...</div>;
@@ -65,15 +86,29 @@ export default function ChatPage() {
           <span className="text-sm font-medium text-gray-700">
             {reading.book.title}
           </span>
+          {session && (
+            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+              {sessionTypeLabel}
+              {isSessionEnded && " (終了)"}
+            </span>
+          )}
         </div>
-        <button
-          onClick={handleEndSession}
-          className="px-3 py-1 text-sm border border-gray-300 text-gray-600 rounded-md hover:bg-gray-50"
-        >
-          セッション終了
-        </button>
+        {!isSessionEnded && (
+          <button
+            onClick={handleEndSession}
+            className="px-3 py-1 text-sm border border-gray-300 text-gray-600 rounded-md hover:bg-gray-50"
+          >
+            セッション終了
+          </button>
+        )}
       </div>
-      <ChatInterface readingId={readingId} sessionId={sessionId} />
+      
+      {/* 終了セッションは履歴表示、アクティブセッションはチャットUI */}
+      {isSessionEnded ? (
+        <ChatHistory readingId={readingId} sessionId={sessionId} />
+      ) : (
+        <ChatInterface readingId={readingId} sessionId={sessionId} />
+      )}
     </div>
   );
 }

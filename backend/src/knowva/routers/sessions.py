@@ -2,7 +2,6 @@ import logging
 
 from fastapi import APIRouter, Depends, HTTPException
 from google.adk.runners import Runner
-from google.adk.sessions import InMemorySessionService
 from google.genai import types
 
 from knowva.agents import reading_reflection_agent
@@ -10,18 +9,22 @@ from knowva.middleware.firebase_auth import get_current_user
 from knowva.models.message import MessageCreate, MessageResponse
 from knowva.models.session import SessionCreate, SessionResponse
 from knowva.services import firestore
+from knowva.services.session_service import get_session_service
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
 APP_NAME = "knowva"
-session_service = InMemorySessionService()
-runner = Runner(
-    agent=reading_reflection_agent,
-    app_name=APP_NAME,
-    session_service=session_service,
-)
+
+
+def get_runner() -> Runner:
+    """ADK Runnerを取得する。FirestoreSessionServiceを使用。"""
+    return Runner(
+        agent=reading_reflection_agent,
+        app_name=APP_NAME,
+        session_service=get_session_service(),
+    )
 
 
 @router.post("/{reading_id}/sessions", response_model=SessionResponse)
@@ -43,6 +46,7 @@ async def create_session(
 
     # ADKセッションも作成（会話コンテキスト用）
     # session_typeもstateに含めて、エージェントが参照できるようにする
+    session_service = get_session_service()
     await session_service.create_session(
         app_name=APP_NAME,
         user_id=user["uid"],
@@ -92,7 +96,8 @@ async def send_message(
         data={"role": "user", "message": body.message, "input_type": body.input_type},
     )
 
-    # ADKセッションが存在するか確認、なければ作成
+    # ADKセッションが存在するか確認、なければ作成（Firestoreから復元）
+    session_service = get_session_service()
     adk_session = await session_service.get_session(
         app_name=APP_NAME, user_id=user["uid"], session_id=session_id
     )
@@ -109,6 +114,7 @@ async def send_message(
         )
 
     # ADK Runnerにメッセージを送信
+    runner = get_runner()
     user_content = types.Content(
         role="user", parts=[types.Part(text=body.message)]
     )
