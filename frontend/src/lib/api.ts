@@ -9,6 +9,8 @@ export async function apiClient<T = unknown>(
   const token = user ? await user.getIdToken() : null;
 
   const res = await fetch(path, {
+    ...options,
+    headers: {
       "Content-Type": "application/json",
       ...(token && { Authorization: `Bearer ${token}` }),
       ...options.headers,
