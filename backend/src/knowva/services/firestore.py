@@ -386,3 +386,89 @@ async def get_mood_comparison(user_id: str, reading_id: str) -> dict:
         "after_mood": after_mood,
         "changes": changes,
     }
+
+
+# --- Profile Entries (非構造的プロファイル情報) ---
+
+
+async def save_profile_entry(user_id: str, data: dict) -> dict:
+    """プロファイルエントリを保存する。"""
+    db: AsyncClient = get_firestore_client()
+    doc_ref = (
+        db.collection("users")
+        .document(user_id)
+        .collection("profileEntries")
+        .document()
+    )
+    now = _now()
+    doc_data = {
+        **data,
+        "created_at": now,
+        "updated_at": now,
+    }
+    await doc_ref.set(doc_data)
+    return {"id": doc_ref.id, **doc_data}
+
+
+async def list_profile_entries(
+    user_id: str, entry_type: Optional[str] = None
+) -> list[dict]:
+    """プロファイルエントリ一覧を取得する。"""
+    db: AsyncClient = get_firestore_client()
+    query = db.collection("users").document(user_id).collection("profileEntries")
+
+    if entry_type:
+        query = query.where("entry_type", "==", entry_type)
+
+    query = query.order_by("created_at", direction="DESCENDING")
+
+    results = []
+    async for doc in query.stream():
+        results.append({"id": doc.id, **doc.to_dict()})
+    return results
+
+
+async def delete_profile_entry(user_id: str, entry_id: str) -> bool:
+    """プロファイルエントリを削除する。"""
+    db: AsyncClient = get_firestore_client()
+    doc_ref = (
+        db.collection("users")
+        .document(user_id)
+        .collection("profileEntries")
+        .document(entry_id)
+    )
+    doc = await doc_ref.get()
+    if not doc.exists:
+        return False
+    await doc_ref.delete()
+    return True
+
+
+# --- All Insights (全読書横断) ---
+
+
+async def list_all_insights(user_id: str, limit: int = 100) -> list[dict]:
+    """全読書のInsight一覧を取得する（本の情報付き）。"""
+    # まず全readingsを取得
+    readings = await list_readings(user_id)
+
+    all_insights = []
+    for reading in readings:
+        insights = await list_insights(user_id, reading["id"])
+        book_info = reading.get("book", {})
+        for insight in insights:
+            all_insights.append(
+                {
+                    **insight,
+                    "reading_id": reading["id"],
+                    "book": {
+                        "title": book_info.get("title", "不明"),
+                        "author": book_info.get("author"),
+                    },
+                }
+            )
+
+    # created_atでソート（新しい順）
+    all_insights.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+
+    return all_insights[:limit]

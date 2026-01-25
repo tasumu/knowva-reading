@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from knowva.config import settings  # noqa: F401 (環境変数設定を含むため最初にimport)
-from knowva.routers import moods, readings, sessions
+from knowva.routers import moods, profile, readings, sessions
 
 app = FastAPI(title="Knowva API", version="0.1.0")
 
@@ -17,6 +17,7 @@ app.add_middleware(
 app.include_router(readings.router, prefix="/api/readings", tags=["readings"])
 app.include_router(sessions.router, prefix="/api/readings", tags=["sessions"])
 app.include_router(moods.router, prefix="/api/readings", tags=["moods"])
+app.include_router(profile.router, prefix="/api/profile", tags=["profile"])
 # TODO(phase2): recommendations router追加
 
 

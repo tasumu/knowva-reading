@@ -105,3 +105,38 @@ export interface MoodCreateInput {
   note?: string;
   dominant_emotion?: string;
 }
+
+// --- プロファイルエントリ ---
+
+export type ProfileEntryType = "goal" | "interest" | "book_wish" | "other";
+
+export interface ProfileEntry {
+  id: string;
+  entry_type: ProfileEntryType;
+  content: string;
+  note?: string;
+  session_ref?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// --- 全読書Insight集約 ---
+
+export interface InsightWithBook extends Insight {
+  reading_id: string;
+  book: BookEmbed;
+}
+
+export interface InsightGroup {
+  key: string;
+  book?: BookEmbed;
+  insight_type?: string;
+  count: number;
+}
+
+export interface AllInsightsResponse {
+  insights: InsightWithBook[];
+  total_count: number;
+  grouped_by: "book" | "type";
+  groups: InsightGroup[];
+}

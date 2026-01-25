@@ -29,9 +29,15 @@ Phase 2の機能（GCS生ログ保存、プロファイル抽出エージェン�
 
 ### 1. Firebase Emulator起動
 ```bash
+# データを永続化する場合（推奨）
+firebase emulators:start --export-on-exit=./emulator-data --import=./emulator-data
+
+# データを永続化しない場合（エミュレーター停止時にデータ消失）
 firebase emulators:start
 ```
 Auth(9099)、Firestore(8080)、Emulator UI(4000) が起動する。
+
+**注意:** デフォルトではエミュレーター停止時にデータが消える。`--export-on-exit` と `--import` オプションでデータを永続化できる。初回起動時は `emulator-data/` ディレクトリが自動作成される。
 
 ### 2. バックエンド起動
 ```bash
