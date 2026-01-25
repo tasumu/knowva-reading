@@ -6,7 +6,6 @@ from google.adk.sessions import InMemorySessionService
 from google.genai import types
 
 from knowva.agents import reading_reflection_agent
-from knowva.config import settings
 from knowva.middleware.firebase_auth import get_current_user
 from knowva.models.message import MessageCreate, MessageResponse
 from knowva.models.session import SessionCreate, SessionResponse
@@ -43,11 +42,16 @@ async def create_session(
     )
 
     # ADKセッションも作成（会話コンテキスト用）
-    adk_session = await session_service.create_session(
+    # session_typeもstateに含めて、エージェントが参照できるようにする
+    await session_service.create_session(
         app_name=APP_NAME,
         user_id=user["uid"],
         session_id=result["id"],
-        state={"reading_id": reading_id, "user_id": user["uid"]},
+        state={
+            "reading_id": reading_id,
+            "user_id": user["uid"],
+            "session_type": body.session_type,
+        },
     )
 
     return result
@@ -97,7 +101,11 @@ async def send_message(
             app_name=APP_NAME,
             user_id=user["uid"],
             session_id=session_id,
-            state={"reading_id": reading_id, "user_id": user["uid"]},
+            state={
+                "reading_id": reading_id,
+                "user_id": user["uid"],
+                "session_type": session.get("session_type", "during_reading"),
+            },
         )
 
     # ADK Runnerにメッセージを送信

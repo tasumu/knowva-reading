@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 
 from knowva.middleware.firebase_auth import get_current_user
-from knowva.models.reading import ReadingCreate, ReadingResponse, ReadingUpdate
 from knowva.models.insight import InsightResponse
+from knowva.models.reading import ReadingCreate, ReadingResponse, ReadingUpdate
 from knowva.services import firestore
 
 router = APIRouter()

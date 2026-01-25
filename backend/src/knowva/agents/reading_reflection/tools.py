@@ -10,12 +10,13 @@ async def save_insight(
 ) -> dict:
     """対話から抽出された気づき・学びをFirestoreに保存する。
 
-    ユーザーとの対話の中で重要な気づきや学びが出てきた際に呼び出す。
+    ユーザーとの対話の中で気づきや学び、印象、疑問などが出てきた際に呼び出す。
+    小さな気づきでも積極的に保存すること。
 
     Args:
-        content: 気づき・学びの内容テキスト。
-        insight_type: 気づきの種類。"learning"(学び), "impression"(印象),
-                      "question"(疑問), "connection"(自分の人生との関連) のいずれか。
+        content: 気づき・学びの内容テキスト。ユーザーの言葉をなるべくそのまま使う。
+        insight_type: 気づきの種類。"learning"(学び), "impression"(印象・感想),
+                      "question"(疑問), "connection"(人生・経験との関連) のいずれか。
         tool_context: ツール実行コンテキスト（セッション情報を含む）。
 
     Returns:
@@ -43,21 +44,91 @@ async def save_insight(
 async def get_reading_context(tool_context: ToolContext) -> dict:
     """現在の読書記録のコンテキスト情報を取得する。
 
-    読書の背景情報（書籍タイトル、著者、読書状況、動機など）を参照するために使う。
+    読書の背景情報（書籍タイトル、著者、読書状況、動機など）とセッションタイプを参照するために使う。
+    最初のメッセージで必ず呼び出すこと。
 
     Args:
         tool_context: ツール実行コンテキスト（セッション情報を含む）。
 
     Returns:
-        dict: 読書コンテキスト。statusとcontextを含む。
+        dict: 読書コンテキストとセッションタイプを含む。
     """
     user_id = tool_context.session.state.get("user_id")
     reading_id = tool_context.session.state.get("reading_id")
+    session_type = tool_context.session.state.get("session_type")
 
     if not user_id or not reading_id:
         return {"status": "error", "error_message": "Session context not found"}
 
     result = await firestore.get_reading(user_id=user_id, reading_id=reading_id)
     if result:
-        return {"status": "success", "context": result}
+        return {
+            "status": "success",
+            "context": result,
+            "session_type": session_type or "during_reading",
+        }
     return {"status": "error", "error_message": "Reading not found"}
+
+
+async def save_mood(
+    energy: int,
+    positivity: int,
+    clarity: int,
+    motivation: int,
+    openness: int,
+    dominant_emotion: str,
+    note: str,
+    tool_context: ToolContext,
+) -> dict:
+    """ユーザーの心境をFirestoreに保存する。
+
+    読書前（before_reading）または読書後（after_reading）のセッションで、
+    対話の序盤でユーザーの心境を把握したら呼び出す。
+
+    Args:
+        energy: 活力レベル (1-5)
+        positivity: 気分のポジティブさ (1-5)
+        clarity: 思考の明晰さ (1-5)
+        motivation: モチベーション (1-5)
+        openness: 新しいことへの開放性 (1-5)
+        dominant_emotion: 支配的な感情（例: 期待、不安、好奇心、疲労など）
+        note: 心境についてのメモ
+        tool_context: ツール実行コンテキスト
+
+    Returns:
+        dict: 保存結果
+    """
+    user_id = tool_context.session.state.get("user_id")
+    reading_id = tool_context.session.state.get("reading_id")
+    session_type = tool_context.session.state.get("session_type")
+
+    if not user_id or not reading_id:
+        return {"status": "error", "error_message": "Session context not found"}
+
+    # セッションタイプに応じてmood_typeを決定
+    if session_type == "before_reading":
+        mood_type = "before"
+    elif session_type == "after_reading":
+        mood_type = "after"
+    else:
+        return {"status": "skipped", "message": "Mood only saved for before/after reading"}
+
+    # 値を1-5の範囲にクランプ
+    def clamp(v: int) -> int:
+        return max(1, min(5, v))
+
+    data = {
+        "mood_type": mood_type,
+        "metrics": {
+            "energy": clamp(energy),
+            "positivity": clamp(positivity),
+            "clarity": clamp(clarity),
+            "motivation": clamp(motivation),
+            "openness": clamp(openness),
+        },
+        "note": note,
+        "dominant_emotion": dominant_emotion,
+    }
+
+    result = await firestore.save_mood(user_id, reading_id, data)
+    return {"status": "success", "mood_id": result["id"], "mood_type": mood_type}

@@ -31,6 +31,13 @@ ENV/
 # uv lock file
 uv.lock
 
+# Node.js
+node_modules/
+
+# Next.js
+.next/
+out/
+
 # IDE
 .idea/
 .vscode/
@@ -44,6 +51,9 @@ Thumbs.db
 
 # Firebase
 .firebaserc
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
 
 # Logs
 *.log

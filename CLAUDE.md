@@ -49,6 +49,26 @@ npm run dev
 
 http://localhost:3000 でアクセス可能。
 
+## 開発コマンド
+
+### バックエンド
+```bash
+cd backend
+uv run uvicorn knowva.main:app --reload --port 8000  # 起動
+uv run ruff check src/                                # lint
+uv run ruff format src/                               # format
+uv run pytest                                         # テスト
+uv run pytest tests/test_specific.py -k test_name    # 単一テスト
+```
+
+### フロントエンド
+```bash
+cd frontend
+npm run dev      # 起動
+npm run build    # ビルド
+npm run lint     # lint
+```
+
 ### 環境変数（backend/.env）
 - `GOOGLE_API_KEY` - Gemini APIキー（必須）
 - `GOOGLE_GENAI_USE_VERTEXAI=FALSE` - Vertex AIを使わない設定
@@ -83,6 +103,7 @@ http://localhost:3000 でアクセス可能。
   ├── /profileHistory/{historyId}
   ├── /readings/{readingId}
   │   ├── /insights/{insightId}
+  │   ├── /moods/{moodId}           # 心境記録（before/after）
   │   └── /sessions/{sessionId}
   │       └── /messages/{messageId}
   └── /recommendations/{recommendationId}
@@ -100,10 +121,11 @@ http://localhost:3000 でアクセス可能。
 - **Agent Framework:** Agent Development Kit (ADK) + google-genai SDK
 - **LLM:** Gemini（現在 `gemini-3-flash-preview`）
 - **ストレージ:** Firestore（構造化データ）。GCS生ログ保存はPhase 2
-- **フロントエンド:** Next.js (App Router) + TypeScript + Tailwind CSS
-- **バックエンド:** Python (FastAPI) + uv
+- **フロントエンド:** Next.js 16 (App Router) + TypeScript + Tailwind CSS 4
+- **バックエンド:** Python 3.12+ (FastAPI) + uv
 - **認証:** Firebase Auth（メール/パスワード）
 - **インフラ（ローカル）:** Firebase Emulator Suite
+- **Firebase Project ID:** `knowva-reading`
 
 ## AIエージェント
 
@@ -113,6 +135,41 @@ http://localhost:3000 でアクセス可能。
 ### Phase 2
 2. **プロファイル抽出エージェント** - 対話ログからユーザーの属性・価値観・状況を抽出・更新
 3. **推薦エージェント** - ユーザープロファイルに基づき次に読むべき本を提案
+
+## 追加実装済み機能
+
+### 音声入力対応（Speech to Text）
+- **技術:** Web Speech API (SpeechRecognition)
+- **実装ファイル:**
+  - `frontend/src/hooks/useSpeechRecognition.ts` - 音声認識カスタムフック
+  - `frontend/src/components/chat/ChatInput.tsx` - 音声対応チャット入力
+  - `frontend/src/components/chat/VoiceInput.tsx` - 単体音声入力コンポーネント
+- **機能:**
+  - リアルタイム文字起こし表示
+  - 日本語音声認識（`ja-JP`）
+  - 音声入力とテキスト入力の切り替え
+  - `input_type: "text" | "voice"` でメッセージに入力方法を記録
+- **注意:** Chrome/Edge推奨（Safari/Firefoxは非対応または制限あり）
+
+### 読書前後の心境変化の可視化
+- **バックエンド:**
+  - `backend/src/knowva/models/mood.py` - 心境データモデル（MoodMetrics, MoodData等）
+  - `backend/src/knowva/routers/moods.py` - Mood API（保存・取得・比較）
+  - `backend/src/knowva/services/firestore.py` - Firestore操作（moods関連追加）
+- **フロントエンド:**
+  - `frontend/src/components/mood/MoodForm.tsx` - 5項目のスライダー入力フォーム
+  - `frontend/src/components/mood/MoodChart.tsx` - SVGレーダーチャート+バー形式の可視化
+  - `frontend/src/app/(main)/readings/[readingId]/page.tsx` - 統合済み
+- **心境メトリクス（各1-5スケール）:**
+  - energy（活力）
+  - positivity（気分）
+  - clarity（思考の明晰さ）
+  - motivation（モチベーション）
+  - openness（開放性）
+- **API:**
+  - `POST /api/readings/{reading_id}/moods` - 心境記録を保存（before/after）
+  - `GET /api/readings/{reading_id}/moods` - 心境記録一覧
+  - `GET /api/readings/{reading_id}/moods/comparison` - 比較データ取得
 
 ## プロジェクト構成
 
@@ -124,9 +181,14 @@ backend/
 │   ├── dependencies.py      # Firestoreクライアント
 │   ├── middleware/
 │   │   └── firebase_auth.py # Firebase Auth認証
+│   ├── models/
+│   │   ├── reading.py       # 読書記録モデル
+│   │   ├── mood.py          # 心境データモデル
+│   │   └── ...
 │   ├── routers/
 │   │   ├── readings.py      # 読書記録CRUD API
-│   │   └── sessions.py      # 対話セッション・メッセージAPI
+│   │   ├── sessions.py      # 対話セッション・メッセージAPI
+│   │   └── moods.py         # 心境記録API
 │   ├── agents/
 │   │   └── reading_reflection/
 │   │       ├── agent.py     # ADK LlmAgent定義
@@ -144,7 +206,11 @@ frontend/
 │   │       ├── home/        # 読書一覧
 │   │       ├── readings/[readingId]/  # 読書詳細・チャット
 │   │       └── profile/     # プロファイル表示
-│   ├── components/chat/     # ChatInterface
+│   ├── components/
+│   │   ├── chat/            # ChatInterface, VoiceInput
+│   │   └── mood/            # MoodForm, MoodChart
+│   ├── hooks/
+│   │   └── useSpeechRecognition.ts  # 音声認識フック
 │   ├── lib/                 # firebase, api, types
 │   └── providers/           # AuthProvider
 ├── package.json
@@ -152,3 +218,15 @@ frontend/
 
 firebase.json                # Emulator設定
 ```
+
+## 注意事項
+
+### ADKプロンプト内のテンプレート変数
+ADK の instruction 内で波括弧 `{}` を使用すると、テンプレート変数として解釈される。プレースホルダーを示す場合は `○○○` などの代替表現を使用すること。
+
+### Gemini API レート制限
+無料枠は1日20リクエスト程度。開発時は API キーの使用状況に注意。レート制限エラー（429）が出た場合は数十秒待つか、新しい API キーを使用する。
+
+### 音声入力（Web Speech API）
+- Chrome/Edge推奨。Safari/Firefoxは非対応または制限あり
+- HTTPSまたはlocalhostでのみ動作（マイクアクセス許可が必要）

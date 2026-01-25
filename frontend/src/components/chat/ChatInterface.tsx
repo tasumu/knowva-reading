@@ -37,7 +37,7 @@ export function ChatInterface({ readingId, sessionId }: Props) {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const handleSend = async (text: string) => {
+  const handleSend = async (text: string, inputType: "text" | "voice" = "text") => {
     setIsLoading(true);
 
     // ユーザーメッセージを即時表示
@@ -45,7 +45,7 @@ export function ChatInterface({ readingId, sessionId }: Props) {
       id: `temp-${Date.now()}`,
       role: "user",
       message: text,
-      input_type: "text",
+      input_type: inputType,
       created_at: new Date().toISOString(),
     };
     setMessages((prev) => [...prev, optimisticMsg]);
@@ -55,7 +55,7 @@ export function ChatInterface({ readingId, sessionId }: Props) {
         `/api/readings/${readingId}/sessions/${sessionId}/messages`,
         {
           method: "POST",
-          body: JSON.stringify({ message: text, input_type: "text" }),
+          body: JSON.stringify({ message: text, input_type: inputType }),
         }
       );
 

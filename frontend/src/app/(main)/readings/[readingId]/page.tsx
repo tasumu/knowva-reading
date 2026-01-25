@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { apiClient } from "@/lib/api";
-import { Reading, Insight, Session } from "@/lib/types";
+import { Reading, Insight, Session, MoodComparison, MoodData } from "@/lib/types";
 import { InsightCard } from "@/components/insights/InsightCard";
+import { MoodChart } from "@/components/mood/MoodChart";
 
 export default function ReadingDetailPage() {
   const params = useParams();
@@ -15,7 +16,43 @@ export default function ReadingDetailPage() {
   const [reading, setReading] = useState<Reading | null>(null);
   const [insights, setInsights] = useState<Insight[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
+  const [moodComparison, setMoodComparison] = useState<MoodComparison | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const fetchMoodData = useCallback(async () => {
+    try {
+      const moods = await apiClient<MoodData[]>(`/api/readings/${readingId}/moods`);
+      const before = moods.find((m) => m.mood_type === "before");
+      const after = moods.find((m) => m.mood_type === "after");
+      
+      // 変化量を計算
+      let changes = undefined;
+      if (before && after) {
+        changes = {
+          energy: after.metrics.energy - before.metrics.energy,
+          positivity: after.metrics.positivity - before.metrics.positivity,
+          clarity: after.metrics.clarity - before.metrics.clarity,
+          motivation: after.metrics.motivation - before.metrics.motivation,
+          openness: after.metrics.openness - before.metrics.openness,
+        };
+      }
+      
+      setMoodComparison({
+        reading_id: readingId,
+        before_mood: before,
+        after_mood: after,
+        changes,
+      });
+    } catch {
+      // 心境データがない場合は空の比較データを設定
+      setMoodComparison({
+        reading_id: readingId,
+        before_mood: undefined,
+        after_mood: undefined,
+        changes: undefined,
+      });
+    }
+  }, [readingId]);
 
   useEffect(() => {
     async function fetchData() {
@@ -28,6 +65,9 @@ export default function ReadingDetailPage() {
         setReading(readingData);
         setInsights(insightsData);
         setSessions(sessionsData);
+        
+        // 心境データを取得
+        await fetchMoodData();
       } catch {
         router.push("/home");
       } finally {
@@ -35,7 +75,7 @@ export default function ReadingDetailPage() {
       }
     }
     fetchData();
-  }, [readingId, router]);
+  }, [readingId, router, fetchMoodData]);
 
   const startSession = async (sessionType: Session["session_type"]) => {
     try {
@@ -86,26 +126,40 @@ export default function ReadingDetailPage() {
           </p>
         )}
 
-        <div className="mt-6 flex gap-2">
+        <div className="mt-6 flex flex-wrap gap-2">
+          <button
+            onClick={() => startSession("before_reading")}
+            className="px-4 py-2 bg-amber-500 text-white rounded-md hover:bg-amber-600 text-sm"
+          >
+            📖 読書前の対話
+          </button>
           <button
             onClick={() => startSession("during_reading")}
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
           >
-            読書中の対話を始める
+            📚 読書中の対話
           </button>
           <button
-            onClick={() => startSession("after_completion")}
+            onClick={() => startSession("after_reading")}
             className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm"
           >
-            読了後の振り返り
-          </button>
-          <button
-            onClick={() => startSession("reflection")}
-            className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 text-sm"
-          >
-            再解釈
+            ✨ 読了後の対話
           </button>
         </div>
+      </div>
+
+      {/* 心境の記録・可視化セクション */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-gray-900">
+            📊 心境の変化
+          </h2>
+          <p className="text-xs text-gray-500">
+            AIとの対話から自動記録されます
+          </p>
+        </div>
+
+        {moodComparison && <MoodChart comparison={moodComparison} />}
       </div>
 
       {/* Insights */}
@@ -143,9 +197,9 @@ export default function ReadingDetailPage() {
               >
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium text-gray-700">
-                    {session.session_type === "during_reading" && "読書中"}
-                    {session.session_type === "after_completion" && "読了後"}
-                    {session.session_type === "reflection" && "再解釈"}
+                    {session.session_type === "before_reading" && "📖 読書前"}
+                    {session.session_type === "during_reading" && "📚 読書中"}
+                    {session.session_type === "after_reading" && "✨ 読了後"}
                   </span>
                   <span className="text-xs text-gray-400">
                     {new Date(session.started_at).toLocaleDateString("ja-JP")}
