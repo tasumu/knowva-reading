@@ -22,7 +22,7 @@ class ReadingCreate(BaseModel):
 
 
 class ReadingUpdate(BaseModel):
-    status: Optional[Literal["reading", "completed"]] = None
+    status: Optional[Literal["not_started", "reading", "completed"]] = None
     reading_context: Optional[ReadingContext] = None
     latest_summary: Optional[str] = None
 
@@ -32,7 +32,7 @@ class ReadingResponse(BaseModel):
     user_id: str
     book: BookEmbed
     read_count: int = 1
-    status: Literal["reading", "completed"] = "reading"
+    status: Literal["not_started", "reading", "completed"] = "not_started"
     start_date: datetime
     completed_date: Optional[datetime] = None
     reading_context: Optional[ReadingContext] = None

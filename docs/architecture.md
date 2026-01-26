@@ -261,28 +261,35 @@ Firestoreは**NoSQLドキュメントデータベース**であり、RDBとは�
 
 ### エージェント階層構造
 
-ADK (Agent Development Kit) のマルチエージェント構成を採用し、Root Agentが目的に応じてsub_agentsに委譲する：
+ADK (Agent Development Kit) のマルチエージェント構成を採用し、各エージェントが独立して動作する。詳細は `docs/agents.md` を参照。
 
 ```
-Root Agent (Router/Orchestrator)
-├── reading_reflection_agent (LlmAgent) - 読書振り返り対話
-├── profile_extraction_agent (LlmAgent) - プロファイル抽出
-└── recommendation_agent (LlmAgent) - 本の推薦
+reading_agent (LlmAgent) - 読書対話全体を担当（前/中/後を状態で管理）
+├── book_guide_agent (LlmAgent) - 専門的な質問への回答（SubAgent）
+
+onboarding_agent (LlmAgent) - 初回プロファイル作成
+
+root_orchestrator_agent (LlmAgent) - 複数エージェントの統括（Phase 2で本格利用）
+├── reading_agent
+├── onboarding_agent
+└── recommendation_agent (Phase 2)
 ```
 
 ### 各エージェントのTools
 
 | エージェント | Tool名 | 機能 |
 |------------|--------|------|
-| reading_reflection_agent | `save_insight` | 対話から抽出した気づきをFirestoreに保存 |
-| reading_reflection_agent | `get_reading_context` | 現在のreading情報（書籍、状況等）を取得 |
-| reading_reflection_agent | `get_user_profile` | ユーザーの現在のプロファイルを取得 |
-| profile_extraction_agent | `update_profile` | ユーザープロファイルを更新 |
-| profile_extraction_agent | `get_session_log` | 対話セッションのログを取得 |
-| profile_extraction_agent | `save_profile_history` | プロファイル変更履歴を保存 |
-| recommendation_agent | `get_user_profile` | ユーザーの現在のプロファイルを取得 |
-| recommendation_agent | `search_books` | 書籍を検索（外部API連携） |
-| recommendation_agent | `save_recommendation` | 推薦結果をFirestoreに保存 |
+| reading_agent | `get_reading_context` | 現在のreading情報（書籍、状況等）を取得 |
+| reading_agent | `save_insight` | 対話から抽出した気づきをFirestoreに保存 |
+| reading_agent | `save_mood` | 心境データを保存（before/after） |
+| reading_agent | `save_profile_entry` | 対話中に得られたプロファイル情報を保存 |
+| book_guide_agent | `google_search` | 関連情報をWeb検索して回答を補強 |
+| book_guide_agent | `get_book_info` | 本の詳細情報を取得 |
+| onboarding_agent | `save_profile_entry` | プロファイル情報をFirestoreに保存 |
+| onboarding_agent | `get_current_entries` | 既存のプロファイル情報を取得 |
+| recommendation_agent (Phase 2) | `get_user_profile` | ユーザーの現在のプロファイルを取得 |
+| recommendation_agent (Phase 2) | `search_books` | 書籍を検索（外部API連携） |
+| recommendation_agent (Phase 2) | `save_recommendation` | 推薦結果をFirestoreに保存 |
 
 ### Session Service
 

@@ -132,3 +132,35 @@ async def save_mood(
 
     result = await firestore.save_mood(user_id, reading_id, data)
     return {"status": "success", "mood_id": result["id"], "mood_type": mood_type}
+
+
+async def update_reading_status(
+    new_status: str,
+    tool_context: ToolContext,
+) -> dict:
+    """読書のステータスを更新する。
+
+    対話の中でユーザーの読書状況が変わったと判断した場合に呼び出す。
+    例: 「読み始めました」→ reading, 「読み終わりました」→ completed
+
+    Args:
+        new_status: 新しいステータス。"not_started"(未読), "reading"(読書中),
+                    "completed"(読了) のいずれか。
+        tool_context: ツール実行コンテキスト。
+
+    Returns:
+        dict: 更新結果。
+    """
+    user_id = tool_context.session.state.get("user_id")
+    reading_id = tool_context.session.state.get("reading_id")
+
+    if not user_id or not reading_id:
+        return {"status": "error", "error_message": "Session context not found"}
+
+    if new_status not in ["not_started", "reading", "completed"]:
+        return {"status": "error", "error_message": f"Invalid status: {new_status}"}
+
+    result = await firestore.update_reading(user_id, reading_id, {"status": new_status})
+    if result:
+        return {"status": "success", "new_status": new_status}
+    return {"status": "error", "error_message": "Failed to update reading status"}

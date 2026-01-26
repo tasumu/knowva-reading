@@ -6,18 +6,20 @@ import { Message } from "@/lib/types";
 import { MessageBubble } from "./MessageBubble";
 import { StreamingMessageBubble } from "./StreamingMessageBubble";
 import { ChatInput } from "./ChatInput";
-import { useStreamingChat } from "@/hooks/useStreamingChat";
+import { useStreamingChat, StatusUpdateResult } from "@/hooks/useStreamingChat";
 
 interface Props {
   readingId: string;
   sessionId: string;
   useStreaming?: boolean;
+  onStatusUpdate?: (result: StatusUpdateResult) => void;
 }
 
 export function ChatInterface({
   readingId,
   sessionId,
   useStreaming = true,
+  onStatusUpdate,
 }: Props) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -41,6 +43,7 @@ export function ChatInterface({
       // ユーザーメッセージも削除（楽観的更新の取り消し）
       setMessages((prev) => prev.filter((m) => !m.id.startsWith("temp-")));
     },
+    onStatusUpdate,
   });
 
   useEffect(() => {

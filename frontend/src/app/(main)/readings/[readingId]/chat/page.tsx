@@ -1,12 +1,21 @@
 "use client";
 
 import { useParams, useSearchParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { apiClient } from "@/lib/api";
-import { Reading, Session } from "@/lib/types";
+import { Reading, Session, ReadingStatus } from "@/lib/types";
 import { ChatInterface } from "@/components/chat/ChatInterface";
 import { ChatHistory } from "@/components/chat/ChatHistory";
+import { ToastContainer, useToast } from "@/components/ui/Toast";
+import { StatusUpdateResult } from "@/hooks/useStreamingChat";
+
+// コンポーネント外に定義してdepsを安定させる
+const STATUS_LABELS: Record<ReadingStatus, string> = {
+  not_started: "📖 読書前",
+  reading: "📚 読書中",
+  completed: "✨ 読了",
+};
 
 export default function ChatPage() {
   const params = useParams();
@@ -19,6 +28,9 @@ export default function ChatPage() {
   const [reading, setReading] = useState<Reading | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // トースト通知
+  const { toasts, showToast, dismissToast } = useToast();
 
   useEffect(() => {
     if (!sessionId) {
@@ -60,8 +72,10 @@ export default function ChatPage() {
   // セッションが終了しているかどうか
   const isSessionEnded = session?.ended_at != null;
 
-  // セッションタイプのラベル
-  const sessionTypeLabel = session
+  // ステータスラベル（readingのステータスを優先、なければセッションタイプから推測）
+  const currentStatusLabel = reading
+    ? STATUS_LABELS[reading.status]
+    : session
     ? {
         before_reading: "📖 読書前",
         during_reading: "📚 読書中",
@@ -69,12 +83,28 @@ export default function ChatPage() {
       }[session.session_type]
     : "";
 
+  // ステータス更新時のハンドラー
+  const handleStatusUpdate = useCallback(
+    (result: StatusUpdateResult) => {
+      const newStatusLabel = STATUS_LABELS[result.new_status];
+      showToast(`ステータスを「${newStatusLabel}」に更新しました`, "success", 3000);
+
+      // readingの状態を更新
+      setReading((prev) =>
+        prev ? { ...prev, status: result.new_status } : prev
+      );
+    },
+    [showToast]
+  );
+
   if (loading || !reading || !sessionId) {
     return <div className="text-center py-8 text-gray-500">読み込み中...</div>;
   }
 
   return (
     <div className="flex flex-col h-[calc(100vh-64px)]">
+      {/* トースト通知 */}
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
       <div className="flex items-center justify-between px-4 py-2 border-b border-gray-200 bg-white">
         <div className="flex items-center gap-3">
           <Link
@@ -86,9 +116,9 @@ export default function ChatPage() {
           <span className="text-sm font-medium text-gray-700">
             {reading.book.title}
           </span>
-          {session && (
+          {(reading || session) && (
             <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-              {sessionTypeLabel}
+              {currentStatusLabel}
               {isSessionEnded && " (終了)"}
             </span>
           )}
@@ -107,7 +137,11 @@ export default function ChatPage() {
       {isSessionEnded ? (
         <ChatHistory readingId={readingId} sessionId={sessionId} />
       ) : (
-        <ChatInterface readingId={readingId} sessionId={sessionId} />
+        <ChatInterface
+          readingId={readingId}
+          sessionId={sessionId}
+          onStatusUpdate={handleStatusUpdate}
+        />
       )}
     </div>
   );

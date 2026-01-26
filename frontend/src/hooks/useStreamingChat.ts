@@ -4,11 +4,16 @@ import { useState, useCallback, useRef } from "react";
 import { sendMessageStream, SSECallbacks } from "@/lib/api";
 import type { Message, StreamingState } from "@/lib/types";
 
+export interface StatusUpdateResult {
+  new_status: "not_started" | "reading" | "completed";
+}
+
 interface UseStreamingChatOptions {
   readingId: string;
   sessionId: string;
   onMessageComplete?: (message: Message) => void;
   onError?: (error: string) => void;
+  onStatusUpdate?: (result: StatusUpdateResult) => void;
 }
 
 export function useStreamingChat({
@@ -16,6 +21,7 @@ export function useStreamingChat({
   sessionId,
   onMessageComplete,
   onError,
+  onStatusUpdate,
 }: UseStreamingChatOptions) {
   const [streamingState, setStreamingState] = useState<StreamingState>({
     isStreaming: false,
@@ -25,6 +31,8 @@ export function useStreamingChat({
   });
 
   const abortControllerRef = useRef<AbortController | null>(null);
+  // ツールコールのマップ（ID -> 名前）をrefで保持してクロージャ問題を回避
+  const toolCallMapRef = useRef<Map<string, string>>(new Map());
 
   const sendMessage = useCallback(
     async (text: string, inputType: "text" | "voice" = "text") => {
@@ -38,6 +46,7 @@ export function useStreamingChat({
         messageId: null,
         toolCalls: [],
       });
+      toolCallMapRef.current.clear();
 
       const callbacks: SSECallbacks = {
         onMessageStart: (data) => {
@@ -53,6 +62,8 @@ export function useStreamingChat({
           }));
         },
         onToolCallStart: (data) => {
+          // refにツール名を記録（onToolCallDoneで参照するため）
+          toolCallMapRef.current.set(data.tool_call_id, data.tool_name);
           setStreamingState((prev) => ({
             ...prev,
             toolCalls: [
@@ -68,6 +79,21 @@ export function useStreamingChat({
               tc.id === data.tool_call_id ? { ...tc, result: data.result } : tc
             ),
           }));
+
+          // ステータス更新ツールの完了を検知（refから取得）
+          const toolName = toolCallMapRef.current.get(data.tool_call_id);
+          if (
+            toolName === "update_reading_status" &&
+            data.result &&
+            typeof data.result === "object" &&
+            "status" in data.result &&
+            data.result.status === "success" &&
+            "new_status" in data.result
+          ) {
+            onStatusUpdate?.({
+              new_status: data.result.new_status as StatusUpdateResult["new_status"],
+            });
+          }
         },
         onMessageDone: (data) => {
           setStreamingState({
@@ -119,7 +145,7 @@ export function useStreamingChat({
         }
       }
     },
-    [readingId, sessionId, onMessageComplete, onError]
+    [readingId, sessionId, onMessageComplete, onError, onStatusUpdate]
   );
 
   const cancelStream = useCallback(() => {

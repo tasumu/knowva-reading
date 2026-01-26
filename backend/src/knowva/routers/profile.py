@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from google.adk.runners import Runner
 from google.genai import types
 
-from knowva.agents import profile_interview_agent
+from knowva.agents import onboarding_agent
 from knowva.middleware.firebase_auth import get_current_user
 from knowva.models.message import MessageCreate, MessageResponse
 from knowva.models.profile import (
@@ -28,7 +28,7 @@ APP_NAME = "knowva_profile"
 def get_profile_runner() -> Runner:
     """プロファイルエージェント用のADK Runnerを取得する。"""
     return Runner(
-        agent=profile_interview_agent,
+        agent=onboarding_agent,
         app_name=APP_NAME,
         session_service=get_session_service(),
     )

@@ -9,8 +9,8 @@
 
 from google.adk.agents import LlmAgent
 
-from knowva.agents.profile_interview.agent import profile_interview_agent
-from knowva.agents.reading_reflection.agent import reading_reflection_agent
+from knowva.agents.onboarding.agent import onboarding_agent
+from knowva.agents.reading.agent import reading_agent
 
 # TODO(phase2): 推薦エージェント追加時にimport
 # from knowva.agents.recommendation.agent import recommendation_agent
@@ -24,14 +24,14 @@ root_orchestrator_agent = LlmAgent(
 ユーザーのリクエストを適切なサブエージェントに振り分けます。
 
 ## サブエージェント一覧
-1. reading_reflection_agent: 読書の振り返り対話を担当
-2. profile_interview_agent: ユーザープロファイルのヒアリングを担当
+1. reading_agent: 読書の振り返り対話を担当
+2. onboarding_agent: ユーザープロファイルのヒアリングを担当
 3. (今後追加予定) recommendation_agent: 本の推薦を担当
 
 ## ルーティングルール
 現在のMVPでは、セッションタイプに基づいてエージェントを選択します:
-- reading セッション → reading_reflection_agent
-- profile セッション → profile_interview_agent
+- reading セッション → reading_agent
+- profile セッション → onboarding_agent
 
 ## 注意事項
 - 日本語で対話してください
@@ -39,8 +39,8 @@ root_orchestrator_agent = LlmAgent(
 - 現在はサブエージェントへの直接委譲のみ対応しています
 """,
     sub_agents=[
-        reading_reflection_agent,
-        profile_interview_agent,
+        reading_agent,
+        onboarding_agent,
         # TODO(phase2): recommendation_agent 追加
     ],
 )

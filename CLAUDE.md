@@ -144,12 +144,14 @@ npm run lint     # lint
 
 ## AIエージェント
 
-### 実装済み（MVP）
-1. **読書振り返りエージェント** - 対話を通じて読書体験を深掘りし、感想・学びの言語化を支援。Insightの自動保存機能付き。
+### 実装済み
+1. **Reading Agent** (`agents/reading/`) - 読書対話全体を担当。読書前・中・後の対話、Insight/プロファイル自動保存
+   - **BookGuide SubAgent** (`agents/reading/book_guide/`) - 専門的な質問（概念解説、時代背景等）に対応するサブエージェント
+2. **Onboarding Agent** (`agents/onboarding/`) - 初回プロファイル作成、ユーザーの目標・興味をヒアリング
+3. **Root Orchestrator** (`agents/orchestrator/`) - 複数エージェントを統括（現在は枠組みのみ）
 
 ### Phase 2
-2. **プロファイル抽出エージェント** - 対話ログからユーザーの属性・価値観・状況を抽出・更新
-3. **推薦エージェント** - ユーザープロファイルに基づき次に読むべき本を提案
+4. **推薦エージェント** - ユーザープロファイルに基づき次に読むべき本を提案
 
 ## 追加実装済み機能
 
@@ -205,9 +207,19 @@ backend/
 │   │   ├── sessions.py      # 対話セッション・メッセージAPI
 │   │   └── moods.py         # 心境記録API
 │   ├── agents/
-│   │   └── reading_reflection/
-│   │       ├── agent.py     # ADK LlmAgent定義
-│   │       └── tools.py     # save_insight, get_reading_context
+│   │   ├── __init__.py          # reading_agent, onboarding_agent, root_orchestrator_agent
+│   │   ├── common/
+│   │   │   └── tools.py         # 共通ツール（save_profile_entry, get_current_entries）
+│   │   ├── reading/
+│   │   │   ├── agent.py         # Reading Agent定義
+│   │   │   ├── tools.py         # save_insight, get_reading_context, save_mood
+│   │   │   └── book_guide/      # BookGuide SubAgent
+│   │   │       ├── agent.py     # BookGuide Agent定義
+│   │   │       └── tools.py     # get_book_info
+│   │   ├── onboarding/
+│   │   │   └── agent.py         # Onboarding Agent定義
+│   │   └── orchestrator/
+│   │       └── agent.py         # Root Orchestrator定義
 │   └── services/
 │       └── firestore.py     # Firestore操作
 ├── pyproject.toml

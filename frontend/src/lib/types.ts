@@ -9,12 +9,14 @@ export interface ReadingContext {
   reading_style?: string;
 }
 
+export type ReadingStatus = "not_started" | "reading" | "completed";
+
 export interface Reading {
   id: string;
   user_id: string;
   book: BookEmbed;
   read_count: number;
-  status: "reading" | "completed";
+  status: ReadingStatus;
   start_date: string;
   completed_date?: string;
   reading_context?: ReadingContext;

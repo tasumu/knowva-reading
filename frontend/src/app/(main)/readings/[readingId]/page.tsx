@@ -4,9 +4,15 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { apiClient } from "@/lib/api";
-import { Reading, Insight, Session, MoodComparison, MoodData } from "@/lib/types";
+import { Reading, ReadingStatus, Insight, Session, MoodComparison, MoodData } from "@/lib/types";
 import { InsightCard } from "@/components/insights/InsightCard";
 import { MoodChart } from "@/components/mood/MoodChart";
+
+const STATUS_OPTIONS: { value: ReadingStatus; label: string; emoji: string }[] = [
+  { value: "not_started", label: "読書前", emoji: "📖" },
+  { value: "reading", label: "読書中", emoji: "📚" },
+  { value: "completed", label: "読了", emoji: "✨" },
+];
 
 export default function ReadingDetailPage() {
   const params = useParams();
@@ -18,13 +24,14 @@ export default function ReadingDetailPage() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [moodComparison, setMoodComparison] = useState<MoodComparison | null>(null);
   const [loading, setLoading] = useState(true);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
 
   const fetchMoodData = useCallback(async () => {
     try {
       const moods = await apiClient<MoodData[]>(`/api/readings/${readingId}/moods`);
       const before = moods.find((m) => m.mood_type === "before");
       const after = moods.find((m) => m.mood_type === "after");
-      
+
       // 変化量を計算
       let changes = undefined;
       if (before && after) {
@@ -36,7 +43,7 @@ export default function ReadingDetailPage() {
           openness: after.metrics.openness - before.metrics.openness,
         };
       }
-      
+
       setMoodComparison({
         reading_id: readingId,
         before_mood: before,
@@ -65,7 +72,7 @@ export default function ReadingDetailPage() {
         setReading(readingData);
         setInsights(insightsData);
         setSessions(sessionsData);
-        
+
         // 心境データを取得
         await fetchMoodData();
       } catch {
@@ -77,7 +84,37 @@ export default function ReadingDetailPage() {
     fetchData();
   }, [readingId, router, fetchMoodData]);
 
-  const startSession = async (sessionType: Session["session_type"]) => {
+  const updateStatus = async (newStatus: ReadingStatus) => {
+    if (!reading || reading.status === newStatus) return;
+
+    setUpdatingStatus(true);
+    try {
+      const updated = await apiClient<Reading>(
+        `/api/readings/${readingId}`,
+        {
+          method: "PATCH",
+          body: JSON.stringify({ status: newStatus }),
+        }
+      );
+      setReading(updated);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "ステータス更新に失敗しました");
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
+  const startSession = async () => {
+    if (!reading) return;
+
+    // 現在のステータスに応じたセッションタイプを決定
+    const sessionTypeMap: Record<ReadingStatus, Session["session_type"]> = {
+      not_started: "before_reading",
+      reading: "during_reading",
+      completed: "after_reading",
+    };
+    const sessionType = sessionTypeMap[reading.status];
+
     try {
       const session = await apiClient<Session>(
         `/api/readings/${readingId}/sessions`,
@@ -96,6 +133,8 @@ export default function ReadingDetailPage() {
     return <div className="text-center py-8 text-gray-500">読み込み中...</div>;
   }
 
+  const currentStatusOption = STATUS_OPTIONS.find(opt => opt.value === reading.status) || STATUS_OPTIONS[0];
+
   return (
     <div>
       <Link href="/home" className="text-sm text-blue-600 hover:underline mb-4 inline-block">
@@ -108,15 +147,6 @@ export default function ReadingDetailPage() {
             <h1 className="text-2xl font-bold text-gray-900">{reading.book.title}</h1>
             <p className="text-gray-600 mt-1">{reading.book.author}</p>
           </div>
-          <span
-            className={`px-3 py-1 text-sm rounded-full ${
-              reading.status === "completed"
-                ? "bg-green-100 text-green-700"
-                : "bg-blue-100 text-blue-700"
-            }`}
-          >
-            {reading.status === "completed" ? "読了" : "読書中"}
-          </span>
         </div>
 
         {reading.reading_context?.motivation && (
@@ -126,25 +156,44 @@ export default function ReadingDetailPage() {
           </p>
         )}
 
-        <div className="mt-6 flex flex-wrap gap-2">
+        {/* ステータスセレクター */}
+        <div className="mt-6">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            読書ステータス
+          </label>
+          <div className="flex gap-2">
+            {STATUS_OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                onClick={() => updateStatus(option.value)}
+                disabled={updatingStatus}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                  reading.status === option.value
+                    ? option.value === "not_started"
+                      ? "bg-amber-500 text-white"
+                      : option.value === "reading"
+                      ? "bg-blue-600 text-white"
+                      : "bg-green-600 text-white"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                } ${updatingStatus ? "opacity-50 cursor-not-allowed" : ""}`}
+              >
+                {option.emoji} {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* 対話開始ボタン */}
+        <div className="mt-6">
           <button
-            onClick={() => startSession("before_reading")}
-            className="px-4 py-2 bg-amber-500 text-white rounded-md hover:bg-amber-600 text-sm"
+            onClick={startSession}
+            className="w-full px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-base font-medium flex items-center justify-center gap-2"
           >
-            📖 読書前の対話
+            {currentStatusOption.emoji} 対話を始める
           </button>
-          <button
-            onClick={() => startSession("during_reading")}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
-          >
-            📚 読書中の対話
-          </button>
-          <button
-            onClick={() => startSession("after_reading")}
-            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm"
-          >
-            ✨ 読了後の対話
-          </button>
+          <p className="text-xs text-gray-500 mt-2 text-center">
+            現在のステータス（{currentStatusOption.label}）に応じた対話が始まります
+          </p>
         </div>
       </div>
 

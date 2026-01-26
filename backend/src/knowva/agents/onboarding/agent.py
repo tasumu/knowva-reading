@@ -1,13 +1,13 @@
 from google.adk.agents import LlmAgent
 from google.adk.tools import FunctionTool
 
-from knowva.agents.profile_interview.tools import (
+from knowva.agents.onboarding.tools import (
     get_current_entries,
     save_profile_entry,
 )
 
-profile_interview_agent = LlmAgent(
-    name="profile_interview_agent",
+onboarding_agent = LlmAgent(
+    name="onboarding_agent",
     model="gemini-3-flash-preview",
     instruction="""あなたはユーザーの読書プロファイルを充実させる「聞き上手」なAIアシスタントです。
 対話を通じて、ユーザーの目標、興味、読みたい本などを自然に聞き出してください。

@@ -9,7 +9,7 @@ from google.adk.runners import Runner
 from google.genai import types
 from sse_starlette import EventSourceResponse, ServerSentEvent
 
-from knowva.agents import reading_reflection_agent
+from knowva.agents import reading_agent
 from knowva.middleware.firebase_auth import get_current_user
 from knowva.models.message import MessageCreate, MessageResponse
 from knowva.models.session import SessionCreate, SessionResponse
@@ -33,7 +33,7 @@ APP_NAME = "knowva"
 def get_runner() -> Runner:
     """ADK Runnerを取得する。FirestoreSessionServiceを使用。"""
     return Runner(
-        agent=reading_reflection_agent,
+        agent=reading_agent,
         app_name=APP_NAME,
         session_service=get_session_service(),
     )
@@ -227,6 +227,8 @@ async def send_message_stream(
 
         message_id = f"msg_{session_id}_{int(time.time() * 1000)}"
         accumulated_text = ""
+        # 進行中のツール呼び出しを追跡
+        pending_tool_calls: dict[str, str] = {}  # tool_id -> tool_name
 
         # メッセージ開始イベント
         yield ServerSentEvent(data=json.dumps({"message_id": message_id}), event="message_start")
@@ -237,18 +239,43 @@ async def send_message_stream(
                 session_id=session_id,
                 new_message=user_content,
             ):
-                # ツール呼び出しイベントの処理
-                if hasattr(event, "actions") and event.actions:
-                    if hasattr(event.actions, "tool_calls") and event.actions.tool_calls:
-                        for tc in event.actions.tool_calls:
-                            tool_name = getattr(tc, "name", None) or getattr(
-                                tc, "function", {}
-                            ).get("name", "unknown")
-                            tool_id = getattr(tc, "id", f"tc_{int(time.time() * 1000)}")
+                # ツール呼び出しイベントの処理（part.function_callをチェック）
+                if event.content and event.content.parts:
+                    for part in event.content.parts:
+                        # function_callパートがあればツール開始イベントを送信
+                        if hasattr(part, "function_call") and part.function_call:
+                            fc = part.function_call
+                            tool_name = getattr(fc, "name", "unknown")
+                            tool_id = getattr(fc, "id", f"tc_{int(time.time() * 1000)}")
+                            pending_tool_calls[tool_id] = tool_name
                             yield ServerSentEvent(
                                 data=json.dumps({"tool_name": tool_name, "tool_call_id": tool_id}),
                                 event="tool_call_start",
                             )
+
+                        # function_responseパートがあればツール完了イベントを送信
+                        if hasattr(part, "function_response") and part.function_response:
+                            fr = part.function_response
+                            tool_id = getattr(fr, "id", None)
+                            tool_name = getattr(fr, "name", None)
+                            result = getattr(fr, "response", {})
+
+                            # tool_idがない場合はpending_tool_callsから探す
+                            if not tool_id and tool_name:
+                                for tid, tname in pending_tool_calls.items():
+                                    if tname == tool_name:
+                                        tool_id = tid
+                                        break
+
+                            if tool_id:
+                                yield ServerSentEvent(
+                                    data=json.dumps({
+                                        "tool_call_id": tool_id,
+                                        "result": result,
+                                    }, default=json_serializer),
+                                    event="tool_call_done",
+                                )
+                                pending_tool_calls.pop(tool_id, None)
 
                 # テキストコンテンツの処理
                 if event.content and event.content.parts:

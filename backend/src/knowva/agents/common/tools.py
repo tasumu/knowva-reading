@@ -1,3 +1,5 @@
+"""複数のエージェントで共有されるツール関数。"""
+
 from google.adk.tools import ToolContext
 
 from knowva.services import firestore
