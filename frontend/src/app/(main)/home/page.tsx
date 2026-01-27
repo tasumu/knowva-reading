@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { apiClient } from "@/lib/api";
-import { ProfileEntry, ProfileEntryType, AllInsightsResponse } from "@/lib/types";
+import { apiClient, getLatestMentorFeedback, chatWithMentor } from "@/lib/api";
+import { ProfileEntry, ProfileEntryType, AllInsightsResponse, MentorFeedback, MentorFeedbackType } from "@/lib/types";
 import { ProfileChatInterface } from "@/components/profile/ProfileChatInterface";
 import { ProfileEntryList } from "@/components/profile/ProfileEntryList";
 import { ProfileEntryForm } from "@/components/profile/ProfileEntryForm";
 import { InsightList } from "@/components/profile/InsightList";
+import Link from "next/link";
 
 export default function HomePage() {
   const [entries, setEntries] = useState<ProfileEntry[]>([]);
@@ -15,6 +16,9 @@ export default function HomePage() {
   const [insightsData, setInsightsData] = useState<AllInsightsResponse | null>(null);
   const [groupBy, setGroupBy] = useState<"book" | "type">("book");
   const [insightsOpen, setInsightsOpen] = useState(true);
+  const [latestFeedback, setLatestFeedback] = useState<MentorFeedback | null>(null);
+  const [mentorLoading, setMentorLoading] = useState(false);
+  const [mentorMessage, setMentorMessage] = useState<string | null>(null);
 
   const fetchEntries = useCallback(async () => {
     try {
@@ -43,6 +47,32 @@ export default function HomePage() {
   useEffect(() => {
     fetchInsights();
   }, [fetchInsights]);
+
+  useEffect(() => {
+    getLatestMentorFeedback()
+      .then(setLatestFeedback)
+      .catch(() => {});
+  }, []);
+
+  const handleQuickReflection = async (feedbackType: MentorFeedbackType) => {
+    setMentorLoading(true);
+    setMentorMessage(null);
+    try {
+      const message =
+        feedbackType === "weekly"
+          ? "今週の振り返りをお願いします"
+          : "今月の振り返りをお願いします";
+      const response = await chatWithMentor(message, feedbackType);
+      setMentorMessage(response.message);
+      // 最新フィードバックを更新
+      getLatestMentorFeedback().then(setLatestFeedback).catch(() => {});
+    } catch (error) {
+      console.error("Failed to generate reflection:", error);
+      setMentorMessage("振り返りの生成に失敗しました。もう一度お試しください。");
+    } finally {
+      setMentorLoading(false);
+    }
+  };
 
   const handleAddEntry = async (data: {
     entry_type: ProfileEntryType;
@@ -97,6 +127,67 @@ export default function HomePage() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-gray-900">ホーム</h1>
+
+      {/* メンターセクション */}
+      <section className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg shadow-sm border border-blue-100 p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-gray-900">🧭 メンター</h2>
+          <Link
+            href="/mentor"
+            className="text-sm text-blue-600 hover:text-blue-800"
+          >
+            対話画面へ →
+          </Link>
+        </div>
+
+        {/* ワンタップ振り返り生成ボタン */}
+        <div className="flex gap-2 mb-4">
+          <button
+            onClick={() => handleQuickReflection("weekly")}
+            disabled={mentorLoading}
+            className="flex-1 px-4 py-2 text-sm font-medium text-blue-700 bg-white hover:bg-blue-50 rounded-lg border border-blue-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {mentorLoading ? "生成中..." : "📅 週次振り返りを生成"}
+          </button>
+          <button
+            onClick={() => handleQuickReflection("monthly")}
+            disabled={mentorLoading}
+            className="flex-1 px-4 py-2 text-sm font-medium text-indigo-700 bg-white hover:bg-indigo-50 rounded-lg border border-indigo-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {mentorLoading ? "生成中..." : "📆 月次振り返りを生成"}
+          </button>
+        </div>
+
+        {/* 生成された振り返りメッセージ */}
+        {mentorMessage && (
+          <div className="bg-white rounded-lg p-4 border border-gray-200 mb-4">
+            <p className="text-sm text-gray-700 whitespace-pre-wrap">{mentorMessage}</p>
+          </div>
+        )}
+
+        {/* 最新フィードバック表示 */}
+        {latestFeedback && !mentorMessage && (
+          <div className="bg-white/70 rounded-lg p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-xs font-medium text-blue-600">
+                最新の{latestFeedback.feedback_type === "weekly" ? "週次" : "月次"}フィードバック
+              </span>
+              <span className="text-xs text-gray-400">
+                {new Date(latestFeedback.created_at).toLocaleDateString("ja-JP")}
+              </span>
+            </div>
+            <p className="text-sm text-gray-600 line-clamp-3">
+              {latestFeedback.content}
+            </p>
+          </div>
+        )}
+
+        {!latestFeedback && !mentorMessage && (
+          <p className="text-sm text-gray-500">
+            上のボタンをタップして、今週/今月の読書活動を振り返りましょう
+          </p>
+        )}
+      </section>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* 左側: 対話エリア */}

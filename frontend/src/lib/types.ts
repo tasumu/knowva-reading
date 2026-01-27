@@ -222,3 +222,23 @@ export type InteractionMode = "freeform" | "guided";
 export interface UserSettings {
   interaction_mode: InteractionMode;
 }
+
+// --- メンター機能 ---
+
+export type MentorFeedbackType = "weekly" | "monthly";
+
+export interface MentorFeedback {
+  id: string;
+  feedback_type: MentorFeedbackType;
+  content: string;
+  period_start?: string;
+  period_end?: string;
+  created_at: string;
+}
+
+export interface MentorMessage {
+  id: string;
+  role: "user" | "assistant";
+  message: string;
+  created_at: string;
+}

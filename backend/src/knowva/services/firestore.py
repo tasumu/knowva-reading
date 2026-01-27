@@ -540,3 +540,99 @@ async def list_all_insights(user_id: str, limit: int = 100) -> list[dict]:
     all_insights.sort(key=lambda x: x.get("created_at", ""), reverse=True)
 
     return all_insights[:limit]
+
+
+# --- Mentor Feedbacks ---
+
+
+async def get_mentor_context(user_id: str, period_days: int = 7) -> dict:
+    """指定期間内の読書・Insight・プロファイル情報を取得する。"""
+    from datetime import timedelta
+
+    cutoff_date = _now() - timedelta(days=period_days)
+
+    # 読書記録を取得（期間内に更新があったもの）
+    readings = await list_readings(user_id)
+    recent_readings = [
+        r for r in readings
+        if r.get("updated_at") and r.get("updated_at") >= cutoff_date
+    ]
+
+    # Insight を取得（期間内に作成されたもの）
+    all_insights = await list_all_insights(user_id, limit=200)
+    recent_insights = [
+        i for i in all_insights
+        if i.get("created_at") and i.get("created_at") >= cutoff_date
+    ]
+
+    # プロファイルエントリを取得
+    profile_entries = await list_profile_entries(user_id)
+
+    return {
+        "period_days": period_days,
+        "readings": [
+            {
+                "id": r["id"],
+                "book": r.get("book", {}),
+                "status": r.get("status"),
+                "updated_at": r.get("updated_at"),
+            }
+            for r in recent_readings
+        ],
+        "insights": [
+            {
+                "content": i.get("content"),
+                "insight_type": i.get("insight_type"),
+                "book": i.get("book"),
+            }
+            for i in recent_insights
+        ],
+        "profile": {
+            "goals": [e for e in profile_entries if e.get("entry_type") == "goal"],
+            "interests": [e for e in profile_entries if e.get("entry_type") == "interest"],
+        },
+        "summary": {
+            "readings_count": len(recent_readings),
+            "insights_count": len(recent_insights),
+        },
+    }
+
+
+async def save_mentor_feedback(user_id: str, data: dict) -> dict:
+    """メンターフィードバックを保存する。"""
+    db: AsyncClient = get_firestore_client()
+    doc_ref = (
+        db.collection("users")
+        .document(user_id)
+        .collection("mentorFeedbacks")
+        .document()
+    )
+    now = _now()
+    doc_data = {
+        **data,
+        "created_at": now,
+    }
+    await doc_ref.set(doc_data)
+    return {"id": doc_ref.id, **doc_data}
+
+
+async def list_mentor_feedbacks(user_id: str, limit: int = 10) -> list[dict]:
+    """メンターフィードバック一覧を取得する。"""
+    db: AsyncClient = get_firestore_client()
+    docs = (
+        db.collection("users")
+        .document(user_id)
+        .collection("mentorFeedbacks")
+        .order_by("created_at", direction="DESCENDING")
+        .limit(limit)
+    )
+    results = []
+    async for doc in docs.stream():
+        results.append({"id": doc.id, **doc.to_dict()})
+    return results
+
+
+async def get_latest_mentor_feedback(user_id: str) -> Optional[dict]:
+    """最新のメンターフィードバックを取得する。"""
+    feedbacks = await list_mentor_feedbacks(user_id, limit=1)
+    return feedbacks[0] if feedbacks else None

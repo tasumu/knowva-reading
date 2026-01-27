@@ -10,6 +10,9 @@ import type {
   SSEMessageDoneData,
   SSEErrorData,
   UserSettings,
+  MentorFeedback,
+  MentorMessage,
+  MentorFeedbackType,
 } from "./types";
 
 // Next.js rewrites経由で同一オリジンからAPIにアクセス（CORSを回避）
@@ -168,5 +171,45 @@ export async function updateUserSettings(
   return apiClient<UserSettings>("/api/profile/settings", {
     method: "PUT",
     body: JSON.stringify(settings),
+  });
+}
+
+// --- メンターAPI ---
+
+/**
+ * メンターフィードバック一覧を取得
+ */
+export async function getMentorFeedbacks(
+  limit: number = 10
+): Promise<MentorFeedback[]> {
+  return apiClient<MentorFeedback[]>(`/api/mentor/feedbacks?limit=${limit}`);
+}
+
+/**
+ * 最新のメンターフィードバックを取得
+ */
+export async function getLatestMentorFeedback(): Promise<MentorFeedback | null> {
+  return apiClient<MentorFeedback | null>("/api/mentor/feedbacks/latest");
+}
+
+/**
+ * メンターとチャット
+ */
+export async function chatWithMentor(
+  message: string,
+  feedbackType: MentorFeedbackType = "weekly"
+): Promise<MentorMessage> {
+  return apiClient<MentorMessage>("/api/mentor/chat", {
+    method: "POST",
+    body: JSON.stringify({ message, feedback_type: feedbackType }),
+  });
+}
+
+/**
+ * メンターセッションをリセット
+ */
+export async function resetMentorSession(): Promise<{ status: string }> {
+  return apiClient<{ status: string }>("/api/mentor/reset", {
+    method: "POST",
   });
 }

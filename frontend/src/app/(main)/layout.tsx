@@ -44,6 +44,9 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
             <Link href="/readings" className="text-sm text-gray-600 hover:text-gray-900">
               読書一覧
             </Link>
+            <Link href="/mentor" className="text-sm text-gray-600 hover:text-gray-900">
+              メンター
+            </Link>
             <Link href="/profile" className="text-sm text-gray-600 hover:text-gray-900">
               あなた
             </Link>
