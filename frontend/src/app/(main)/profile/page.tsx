@@ -100,15 +100,16 @@ export default function ProfilePage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* 左側: 対話エリア */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 overflow-hidden">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
-            AIと対話する
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 flex flex-col">
+          <h2 className="text-lg font-semibold text-gray-900 mb-2">
+            💬 AIと対話する
           </h2>
           <p className="text-sm text-gray-500 mb-4">
-            あなたの目標、興味、読みたい本などを自由に話してください。
-            AIが聞き出してプロファイルに追加します。
+            目標、興味、読みたい本などを話してください
           </p>
-          <ProfileChatInterface onEntryAdded={fetchEntries} />
+          <div className="flex-1 min-h-0">
+            <ProfileChatInterface onEntryAdded={fetchEntries} />
+          </div>
         </div>
 
         {/* 右側: 現在のエントリ一覧 */}

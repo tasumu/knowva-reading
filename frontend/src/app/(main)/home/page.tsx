@@ -167,7 +167,7 @@ export default function HomePage() {
 
         {/* 最新フィードバック表示 */}
         {latestFeedback && !mentorMessage && (
-          <div className="bg-white/70 rounded-lg p-4">
+          <div className="bg-white/70 rounded-lg p-4 border border-gray-200">
             <div className="flex items-center gap-2 mb-2">
               <span className="text-xs font-medium text-blue-600">
                 最新の{latestFeedback.feedback_type === "weekly" ? "週次" : "月次"}フィードバック
@@ -176,7 +176,7 @@ export default function HomePage() {
                 {new Date(latestFeedback.created_at).toLocaleDateString("ja-JP")}
               </span>
             </div>
-            <p className="text-sm text-gray-600 line-clamp-3">
+            <p className="text-sm text-gray-700 whitespace-pre-wrap max-h-[300px] overflow-y-auto">
               {latestFeedback.content}
             </p>
           </div>
@@ -189,61 +189,6 @@ export default function HomePage() {
         )}
       </section>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* 左側: 対話エリア */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 overflow-hidden">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
-            AIと対話する
-          </h2>
-          <p className="text-sm text-gray-500 mb-4">
-            あなたの目標、興味、読みたい本などを自由に話してください。
-            AIが聞き出してプロファイルに追加します。
-          </p>
-          <ProfileChatInterface onEntryAdded={fetchEntries} />
-        </div>
-
-        {/* 右側: 現在のエントリ一覧 */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">
-              あなたについて ({entries.length})
-            </h2>
-            {!showAddForm && (
-              <button
-                onClick={() => setShowAddForm(true)}
-                className="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
-              >
-                + 手動で追加
-              </button>
-            )}
-          </div>
-
-          {showAddForm && (
-            <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-              <h3 className="text-sm font-medium text-gray-700 mb-3">
-                新規追加
-              </h3>
-              <ProfileEntryForm
-                onSave={handleAddEntry}
-                onCancel={() => setShowAddForm(false)}
-              />
-            </div>
-          )}
-
-          {entries.length === 0 && !showAddForm ? (
-            <p className="text-sm text-gray-400 text-center py-4">
-              まだ情報がありません。AIと対話するか、手動で追加しましょう。
-            </p>
-          ) : (
-            <ProfileEntryList
-              entries={entries}
-              onDelete={handleDeleteEntry}
-              onEdit={handleEditEntry}
-            />
-          )}
-        </div>
-      </div>
-
       {/* 全読書からのInsight一覧（折りたたみ） */}
       <section className="bg-white rounded-lg shadow-sm border border-gray-200">
         <button
@@ -251,7 +196,7 @@ export default function HomePage() {
           className="w-full flex items-center justify-between p-6 text-left"
         >
           <h2 className="text-lg font-semibold text-gray-900">
-            読書からの気づき ({insightsData?.total_count || 0})
+            💡 読書からの気づき ({insightsData?.total_count || 0})
           </h2>
           <svg
             className={`w-5 h-5 text-gray-500 transition-transform ${insightsOpen ? "rotate-180" : ""}`}
@@ -295,6 +240,62 @@ export default function HomePage() {
           </div>
         )}
       </section>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* 左側: 対話エリア */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 flex flex-col">
+          <h2 className="text-lg font-semibold text-gray-900 mb-2">
+            💬 AIと対話する
+          </h2>
+          <p className="text-sm text-gray-500 mb-4">
+            目標、興味、読みたい本などを話してください
+          </p>
+          <div className="flex-1 min-h-0">
+            <ProfileChatInterface onEntryAdded={fetchEntries} />
+          </div>
+        </div>
+
+        {/* 右側: 現在のエントリ一覧 */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">
+              👤 あなたについて ({entries.length})
+            </h2>
+            {!showAddForm && (
+              <button
+                onClick={() => setShowAddForm(true)}
+                className="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              >
+                + 手動で追加
+              </button>
+            )}
+          </div>
+
+          {showAddForm && (
+            <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <h3 className="text-sm font-medium text-gray-700 mb-3">
+                新規追加
+              </h3>
+              <ProfileEntryForm
+                onSave={handleAddEntry}
+                onCancel={() => setShowAddForm(false)}
+              />
+            </div>
+          )}
+
+          {entries.length === 0 && !showAddForm ? (
+            <p className="text-sm text-gray-400 text-center py-4">
+              まだ情報がありません。AIと対話するか、手動で追加しましょう。
+            </p>
+          ) : (
+            <ProfileEntryList
+              entries={entries}
+              onDelete={handleDeleteEntry}
+              onEdit={handleEditEntry}
+            />
+          )}
+        </div>
+      </div>
     </div>
   );
 }
