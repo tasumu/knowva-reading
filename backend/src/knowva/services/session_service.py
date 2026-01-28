@@ -1,8 +1,8 @@
 """
 Firestore-backed Session Service for ADK.
 
-ローカル開発用のセッション永続化サービス。
-本番環境では Agent Engine の managed session service に置き換えられる想定。
+セッション状態をFirestoreに永続化するサービス。
+ローカル開発・本番環境の両方で使用。
 """
 
 import logging

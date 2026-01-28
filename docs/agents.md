@@ -415,8 +415,7 @@ ChatInterface (Frontend) - リアルタイム表示
 | 環境 | Session Service |
 |------|----------------|
 | ローカル開発 | FirestoreSessionService |
-| 本番 (現在) | FirestoreSessionService |
-| 本番 (Phase 2) | Agent Engine managed |
+| 本番 | FirestoreSessionService |
 
 ---
 

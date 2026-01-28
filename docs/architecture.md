@@ -6,9 +6,9 @@
 
 Knowvaは**長期保存を本丸**として、以下の3層構成で設計します：
 
-#### 1) 実行基盤（Agent Engine）
+#### 1) 実行基盤（ADK + Cloud Run）
 - **役割:** 会話の実行・ツール実行・セッション管理
-- **技術:** ADK + Gemini API（またはVertex AI）
+- **技術:** ADK + Gemini API(ローカル)/Vertex(クラウド)
 - **責務:** ユーザーとの対話を「聞き上手」に進行させる
 
 #### 2) 長期保存層（**本丸**）
@@ -203,7 +203,6 @@ Insightの`visibility`を変更すると：
 |------|----------------|------|
 | ローカル開発 | `FirestoreSessionService` | セッション状態をFirestoreに永続化 |
 | 本番 | `FirestoreSessionService` | 同上 |
-| Phase 2 | Agent Engine managed | Agent Engineがセッション管理を提供 |
 
 ---
 
@@ -375,9 +374,9 @@ User → POST /api/.../sessions/{id}/init → FastAPI
 
 ## 技術スタック
 
-### 1) 実行基盤（Agent Engine）
+### 1) 実行基盤（ADK + Cloud Run）
 - **Agent Framework:** Agent Development Kit (ADK) + google-genai SDK
-- **LLM:** Gemini（現在 `gemini-3-flash-preview`）
+- **LLM:** Gemini（現在 `gemini-3-flash-preview`）、本番はVertex AI経由
 - **セッション管理:** FirestoreSessionService
 
 ### 2) 長期保存層（本丸）
@@ -446,6 +445,5 @@ User → POST /api/.../sessions/{id}/init → FastAPI
 - **Firebase Project ID:** `knowva-reading`
 
 #### Phase 2以降
-- **Agent Engine:** `adk deploy agent_engine` でデプロイ予定
 - **GCS:** 生ログ保存
 - 非同期処理: Cloud Functions

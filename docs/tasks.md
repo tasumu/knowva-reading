@@ -78,9 +78,6 @@
 
 ### インフラ
 
-- [ ] Agent Engineデプロイ対応 - `adk deploy agent_engine` でデプロイ
-  - SessionServiceをAgent Engine管理に切り替え
-  - `GOOGLE_GENAI_USE_VERTEXAI=TRUE`（APIキー不要、サービスアカウント認証）
 - [ ] 本番Firebase Auth設定（Googleログイン等追加）
 
 ---
