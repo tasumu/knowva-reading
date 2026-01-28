@@ -4,14 +4,15 @@ import logging
 from datetime import datetime, timezone
 from typing import Literal, Optional
 
-from fastapi import APIRouter, Depends
-from pydantic import BaseModel
-
+from fastapi import APIRouter, Depends, Request
 from google.adk.runners import Runner
 from google.genai import types
+from pydantic import BaseModel
 
 from knowva.agents import mentor_agent
+from knowva.config import settings
 from knowva.middleware.firebase_auth import get_current_user
+from knowva.middleware.rate_limit import limiter
 from knowva.services import firestore
 from knowva.services.session_service import get_session_service
 
@@ -87,7 +88,9 @@ async def get_latest_mentor_feedback(
 
 
 @router.post("/chat", response_model=MentorChatResponse)
+@limiter.limit(settings.rate_limit_ai_endpoints)
 async def chat_with_mentor(
+    request: Request,
     body: MentorChatRequest,
     user: dict = Depends(get_current_user),
 ):

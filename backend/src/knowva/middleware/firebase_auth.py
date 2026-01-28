@@ -37,7 +37,7 @@ async def get_current_user(
     _get_firebase_app()
     token = credentials.credentials
     try:
-        decoded = auth.verify_id_token(token, check_revoked=False)
+        decoded = auth.verify_id_token(token, check_revoked=True)
         return {"uid": decoded["uid"], "email": decoded.get("email")}
     except Exception as e:
         print(f"Auth error: {e}")  # Debug用

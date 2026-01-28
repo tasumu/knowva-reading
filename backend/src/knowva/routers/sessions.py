@@ -4,13 +4,15 @@ import time
 from collections.abc import AsyncGenerator
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from google.adk.runners import Runner
 from google.genai import types
 from sse_starlette import EventSourceResponse, ServerSentEvent
 
 from knowva.agents import reading_agent
+from knowva.config import settings
 from knowva.middleware.firebase_auth import get_current_user
+from knowva.middleware.rate_limit import limiter
 from knowva.models.message import MessageCreate, MessageResponse
 from knowva.models.session import SessionCreate, SessionResponse
 from knowva.services import firestore
@@ -26,6 +28,7 @@ def json_serializer(obj):
     if isinstance(obj, datetime):
         return obj.isoformat()
     raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
+
 
 APP_NAME = "knowva"
 
@@ -86,7 +89,9 @@ async def list_sessions(
     "/{reading_id}/sessions/{session_id}/messages",
     response_model=MessageResponse,
 )
+@limiter.limit(settings.rate_limit_ai_endpoints)
 async def send_message(
+    request: Request,
     reading_id: str,
     session_id: str,
     body: MessageCreate,
@@ -127,9 +132,7 @@ async def send_message(
 
     # ADK Runnerにメッセージを送信
     runner = get_runner()
-    user_content = types.Content(
-        role="user", parts=[types.Part(text=body.message)]
-    )
+    user_content = types.Content(role="user", parts=[types.Part(text=body.message)])
 
     response_text = ""
     try:
@@ -182,7 +185,9 @@ async def list_messages(
 
 
 @router.post("/{reading_id}/sessions/{session_id}/messages/stream")
+@limiter.limit(settings.rate_limit_ai_endpoints)
 async def send_message_stream(
+    request: Request,
     reading_id: str,
     session_id: str,
     body: MessageCreate,
@@ -271,21 +276,30 @@ async def send_message_stream(
                             if tool_name == "present_options" and isinstance(result, dict):
                                 if result.get("status") == "options_presented":
                                     yield ServerSentEvent(
-                                        data=json.dumps({
-                                            "prompt": result.get("prompt", ""),
-                                            "options": result.get("options", []),
-                                            "allow_multiple": result.get("allow_multiple", True),
-                                            "allow_freeform": result.get("allow_freeform", True),
-                                        }),
+                                        data=json.dumps(
+                                            {
+                                                "prompt": result.get("prompt", ""),
+                                                "options": result.get("options", []),
+                                                "allow_multiple": result.get(
+                                                    "allow_multiple", True
+                                                ),
+                                                "allow_freeform": result.get(
+                                                    "allow_freeform", True
+                                                ),
+                                            }
+                                        ),
                                         event="options_request",
                                     )
 
                             if tool_id:
                                 yield ServerSentEvent(
-                                    data=json.dumps({
-                                        "tool_call_id": tool_id,
-                                        "result": result,
-                                    }, default=json_serializer),
+                                    data=json.dumps(
+                                        {
+                                            "tool_call_id": tool_id,
+                                            "result": result,
+                                        },
+                                        default=json_serializer,
+                                    ),
                                     event="tool_call_done",
                                 )
                                 pending_tool_calls.pop(tool_id, None)
@@ -351,7 +365,9 @@ async def send_message_stream(
 
 
 @router.post("/{reading_id}/sessions/{session_id}/init")
+@limiter.limit(settings.rate_limit_ai_endpoints)
 async def init_session(
+    request: Request,
     reading_id: str,
     session_id: str,
     user: dict = Depends(get_current_user),
@@ -430,21 +446,30 @@ async def init_session(
                             if tool_name == "present_options" and isinstance(result, dict):
                                 if result.get("status") == "options_presented":
                                     yield ServerSentEvent(
-                                        data=json.dumps({
-                                            "prompt": result.get("prompt", ""),
-                                            "options": result.get("options", []),
-                                            "allow_multiple": result.get("allow_multiple", True),
-                                            "allow_freeform": result.get("allow_freeform", True),
-                                        }),
+                                        data=json.dumps(
+                                            {
+                                                "prompt": result.get("prompt", ""),
+                                                "options": result.get("options", []),
+                                                "allow_multiple": result.get(
+                                                    "allow_multiple", True
+                                                ),
+                                                "allow_freeform": result.get(
+                                                    "allow_freeform", True
+                                                ),
+                                            }
+                                        ),
                                         event="options_request",
                                     )
 
                             if tool_id:
                                 yield ServerSentEvent(
-                                    data=json.dumps({
-                                        "tool_call_id": tool_id,
-                                        "result": result,
-                                    }, default=json_serializer),
+                                    data=json.dumps(
+                                        {
+                                            "tool_call_id": tool_id,
+                                            "result": result,
+                                        },
+                                        default=json_serializer,
+                                    ),
                                     event="tool_call_done",
                                 )
                                 pending_tool_calls.pop(tool_id, None)
@@ -468,10 +493,12 @@ async def init_session(
         except Exception as e:
             logger.error(f"ADK runner error during init: {e}", exc_info=True)
             yield ServerSentEvent(
-                data=json.dumps({
-                    "code": "runner_error",
-                    "message": "初期化中にエラーが発生しました。",
-                }),
+                data=json.dumps(
+                    {
+                        "code": "runner_error",
+                        "message": "初期化中にエラーが発生しました。",
+                    }
+                ),
                 event="error",
             )
             return
