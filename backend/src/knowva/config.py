@@ -15,6 +15,10 @@ class Settings(BaseSettings):
     google_genai_use_vertexai: str = "FALSE"
     allowed_origins: Union[str, List[str]] = "http://localhost:3000"
 
+    # レート制限設定
+    rate_limit_default: str = "60/minute"
+    rate_limit_ai_endpoints: str = "10/minute;100/hour"
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 
     @field_validator("allowed_origins", mode="after")
