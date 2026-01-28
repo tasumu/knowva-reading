@@ -11,7 +11,7 @@ import {
 } from "@/lib/api";
 import { UserSettings, InteractionMode, TimelineOrder } from "@/lib/types";
 
-export default function ProfileSettingsPage() {
+export default function SettingsPage() {
   const { user } = useAuth();
   const [userSettings, setUserSettings] = useState<UserSettings | null>(null);
   const [settingsLoading, setSettingsLoading] = useState(true);
@@ -85,10 +85,10 @@ export default function ProfileSettingsPage() {
       <div className="flex items-center justify-between">
         <div>
           <Link
-            href="/profile"
+            href="/home"
             className="text-sm text-blue-600 hover:underline"
           >
-            &larr; あなたに戻る
+            &larr; ホームに戻る
           </Link>
           <h1 className="text-2xl font-bold text-gray-900 mt-2">
             設定

@@ -2,11 +2,12 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { apiClient, getLatestMentorFeedback, chatWithMentor } from "@/lib/api";
-import { ProfileEntry, ProfileEntryType, AllInsightsResponse, MentorFeedback, MentorFeedbackType } from "@/lib/types";
+import { ProfileEntry, ProfileEntryType, AllInsightsResponse, MentorFeedback, MentorFeedbackType, Reading } from "@/lib/types";
 import { ProfileChatInterface } from "@/components/profile/ProfileChatInterface";
 import { ProfileEntryList } from "@/components/profile/ProfileEntryList";
 import { ProfileEntryForm } from "@/components/profile/ProfileEntryForm";
 import { InsightList } from "@/components/profile/InsightList";
+import { ReadingCard } from "@/components/readings/ReadingCard";
 import Link from "next/link";
 
 export default function HomePage() {
@@ -16,9 +17,13 @@ export default function HomePage() {
   const [insightsData, setInsightsData] = useState<AllInsightsResponse | null>(null);
   const [groupBy, setGroupBy] = useState<"book" | "type">("book");
   const [insightsOpen, setInsightsOpen] = useState(true);
+  const [reflectionOpen, setReflectionOpen] = useState(true);
+  const [recentReadingsOpen, setRecentReadingsOpen] = useState(true);
+  const [profileOpen, setProfileOpen] = useState(true);
   const [latestFeedback, setLatestFeedback] = useState<MentorFeedback | null>(null);
   const [mentorLoading, setMentorLoading] = useState(false);
   const [mentorMessage, setMentorMessage] = useState<string | null>(null);
+  const [recentReadings, setRecentReadings] = useState<Reading[]>([]);
 
   const fetchEntries = useCallback(async () => {
     try {
@@ -40,6 +45,19 @@ export default function HomePage() {
     }
   }, [groupBy]);
 
+  const fetchRecentReadings = useCallback(async () => {
+    try {
+      const readings = await apiClient<Reading[]>("/api/readings");
+      // updated_at順（降順）でソートして最新4件を取得
+      const sorted = readings
+        .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+        .slice(0, 4);
+      setRecentReadings(sorted);
+    } catch (error) {
+      console.error("Failed to fetch readings:", error);
+    }
+  }, []);
+
   useEffect(() => {
     fetchEntries();
   }, [fetchEntries]);
@@ -47,6 +65,10 @@ export default function HomePage() {
   useEffect(() => {
     fetchInsights();
   }, [fetchInsights]);
+
+  useEffect(() => {
+    fetchRecentReadings();
+  }, [fetchRecentReadings]);
 
   useEffect(() => {
     getLatestMentorFeedback()
@@ -128,66 +150,131 @@ export default function HomePage() {
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-gray-900">ホーム</h1>
 
-      {/* メンターセクション */}
-      <section className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg shadow-sm border border-blue-100 p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">🧭 メンター</h2>
-          <Link
-            href="/mentor"
-            className="text-sm text-blue-600 hover:text-blue-800"
-          >
-            対話画面へ →
-          </Link>
-        </div>
-
-        {/* ワンタップ振り返り生成ボタン */}
-        <div className="flex gap-2 mb-4">
-          <button
-            onClick={() => handleQuickReflection("weekly")}
-            disabled={mentorLoading}
-            className="flex-1 px-4 py-2 text-sm font-medium text-blue-700 bg-white hover:bg-blue-50 rounded-lg border border-blue-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {mentorLoading ? "生成中..." : "📅 週次振り返りを生成"}
-          </button>
-          <button
-            onClick={() => handleQuickReflection("monthly")}
-            disabled={mentorLoading}
-            className="flex-1 px-4 py-2 text-sm font-medium text-indigo-700 bg-white hover:bg-indigo-50 rounded-lg border border-indigo-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {mentorLoading ? "生成中..." : "📆 月次振り返りを生成"}
-          </button>
-        </div>
-
-        {/* 生成された振り返りメッセージ */}
-        {mentorMessage && (
-          <div className="bg-white rounded-lg p-4 border border-gray-200 mb-4">
-            <p className="text-sm text-gray-700 whitespace-pre-wrap">{mentorMessage}</p>
+      {/* 振り返りセクション */}
+      <section className="bg-white rounded-lg shadow-sm border border-gray-200">
+        <button
+          onClick={() => setReflectionOpen(!reflectionOpen)}
+          className="w-full flex items-center justify-between p-6 text-left"
+        >
+          <h2 className="text-lg font-semibold text-gray-900">🧭 振り返り</h2>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/mentor"
+              onClick={(e) => e.stopPropagation()}
+              className="text-sm text-blue-600 hover:text-blue-800"
+            >
+              対話画面へ →
+            </Link>
+            <svg
+              className={`w-5 h-5 text-gray-500 transition-transform ${reflectionOpen ? "rotate-180" : ""}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 9l-7 7-7-7"
+              />
+            </svg>
           </div>
-        )}
-
-        {/* 最新フィードバック表示 */}
-        {latestFeedback && !mentorMessage && (
-          <div className="bg-white/70 rounded-lg p-4 border border-gray-200">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-xs font-medium text-blue-600">
-                最新の{latestFeedback.feedback_type === "weekly" ? "週次" : "月次"}フィードバック
-              </span>
-              <span className="text-xs text-gray-400">
-                {new Date(latestFeedback.created_at).toLocaleDateString("ja-JP")}
-              </span>
+        </button>
+        {reflectionOpen && (
+          <div className="px-6 pb-6">
+            {/* ワンタップ振り返り生成ボタン */}
+            <div className="flex gap-2 mb-4">
+              <button
+                onClick={() => handleQuickReflection("weekly")}
+                disabled={mentorLoading}
+                className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {mentorLoading ? "生成中..." : "📅 週次振り返りを生成"}
+              </button>
+              <button
+                onClick={() => handleQuickReflection("monthly")}
+                disabled={mentorLoading}
+                className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {mentorLoading ? "生成中..." : "📆 月次振り返りを生成"}
+              </button>
             </div>
-            <p className="text-sm text-gray-700 whitespace-pre-wrap max-h-[300px] overflow-y-auto">
-              {latestFeedback.content}
-            </p>
-          </div>
-        )}
 
-        {!latestFeedback && !mentorMessage && (
-          <p className="text-sm text-gray-500">
-            上のボタンをタップして、今週/今月の読書活動を振り返りましょう
-          </p>
+            {/* 生成された振り返りメッセージ */}
+            {mentorMessage && (
+              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 mb-4">
+                <p className="text-sm text-gray-700 whitespace-pre-wrap">{mentorMessage}</p>
+              </div>
+            )}
+
+            {/* 最新フィードバック表示 */}
+            {latestFeedback && !mentorMessage && (
+              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-xs font-medium text-gray-600">
+                    最新の{latestFeedback.feedback_type === "weekly" ? "週次" : "月次"}フィードバック
+                  </span>
+                  <span className="text-xs text-gray-400">
+                    {new Date(latestFeedback.created_at).toLocaleDateString("ja-JP")}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-700 whitespace-pre-wrap max-h-[300px] overflow-y-auto">
+                  {latestFeedback.content}
+                </p>
+              </div>
+            )}
+
+            {!latestFeedback && !mentorMessage && (
+              <p className="text-sm text-gray-500">
+                上のボタンをタップして、今週/今月の読書活動を振り返りましょう
+              </p>
+            )}
+          </div>
         )}
       </section>
+
+      {/* 最近の読書セクション */}
+      {recentReadings.length > 0 && (
+        <section className="bg-white rounded-lg shadow-sm border border-gray-200">
+          <button
+            onClick={() => setRecentReadingsOpen(!recentReadingsOpen)}
+            className="w-full flex items-center justify-between p-6 text-left"
+          >
+            <h2 className="text-lg font-semibold text-gray-900">📚 最近の読書</h2>
+            <div className="flex items-center gap-3">
+              <Link
+                href="/readings"
+                onClick={(e) => e.stopPropagation()}
+                className="text-sm text-blue-600 hover:text-blue-800"
+              >
+                すべて見る →
+              </Link>
+              <svg
+                className={`w-5 h-5 text-gray-500 transition-transform ${recentReadingsOpen ? "rotate-180" : ""}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+            </div>
+          </button>
+          {recentReadingsOpen && (
+            <div className="px-6 pb-6">
+              <div className="grid gap-4 sm:grid-cols-2">
+                {recentReadings.map((reading) => (
+                  <ReadingCard key={reading.id} reading={reading} />
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
+      )}
 
       {/* 全読書からのInsight一覧（折りたたみ） */}
       <section className="bg-white rounded-lg shadow-sm border border-gray-200">
@@ -241,61 +328,96 @@ export default function HomePage() {
         )}
       </section>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* 左側: 対話エリア */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 flex flex-col">
-          <h2 className="text-lg font-semibold text-gray-900 mb-2">
-            💬 AIと対話する
+      {/* あなたについて & AIと対話する セクション */}
+      <section className="bg-white rounded-lg shadow-sm border border-gray-200">
+        <button
+          onClick={() => setProfileOpen(!profileOpen)}
+          className="w-full flex items-center justify-between p-6 text-left"
+        >
+          <h2 className="text-lg font-semibold text-gray-900">
+            👤 あなたについて ({entries.length})
           </h2>
-          <p className="text-sm text-gray-500 mb-4">
-            目標、興味、読みたい本などを話してください
-          </p>
-          <div className="flex-1 min-h-0">
-            <ProfileChatInterface onEntryAdded={fetchEntries} />
-          </div>
-        </div>
-
-        {/* 右側: 現在のエントリ一覧 */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">
-              👤 あなたについて ({entries.length})
-            </h2>
-            {!showAddForm && (
-              <button
-                onClick={() => setShowAddForm(true)}
-                className="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
-              >
-                + 手動で追加
-              </button>
-            )}
-          </div>
-
-          {showAddForm && (
-            <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-              <h3 className="text-sm font-medium text-gray-700 mb-3">
-                新規追加
-              </h3>
-              <ProfileEntryForm
-                onSave={handleAddEntry}
-                onCancel={() => setShowAddForm(false)}
+          <div className="flex items-center gap-3">
+            <Link
+              href="/settings"
+              onClick={(e) => e.stopPropagation()}
+              className="text-sm text-blue-600 hover:text-blue-800"
+            >
+              設定へ →
+            </Link>
+            <svg
+              className={`w-5 h-5 text-gray-500 transition-transform ${profileOpen ? "rotate-180" : ""}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 9l-7 7-7-7"
               />
-            </div>
-          )}
+            </svg>
+          </div>
+        </button>
+        {profileOpen && (
+          <div className="px-6 pb-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* 左側: エントリ一覧 */}
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-medium text-gray-700">プロフィール情報</h3>
+                  {!showAddForm && (
+                    <button
+                      onClick={() => setShowAddForm(true)}
+                      className="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                    >
+                      + 手動で追加
+                    </button>
+                  )}
+                </div>
 
-          {entries.length === 0 && !showAddForm ? (
-            <p className="text-sm text-gray-400 text-center py-4">
-              まだ情報がありません。AIと対話するか、手動で追加しましょう。
-            </p>
-          ) : (
-            <ProfileEntryList
-              entries={entries}
-              onDelete={handleDeleteEntry}
-              onEdit={handleEditEntry}
-            />
-          )}
-        </div>
-      </div>
+                {showAddForm && (
+                  <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <h4 className="text-sm font-medium text-gray-700 mb-3">
+                      新規追加
+                    </h4>
+                    <ProfileEntryForm
+                      onSave={handleAddEntry}
+                      onCancel={() => setShowAddForm(false)}
+                    />
+                  </div>
+                )}
+
+                {entries.length === 0 && !showAddForm ? (
+                  <p className="text-sm text-gray-400 text-center py-4">
+                    まだ情報がありません。AIと対話するか、手動で追加しましょう。
+                  </p>
+                ) : (
+                  <ProfileEntryList
+                    entries={entries}
+                    onDelete={handleDeleteEntry}
+                    onEdit={handleEditEntry}
+                  />
+                )}
+              </div>
+
+              {/* 右側: 対話エリア */}
+              <div className="flex flex-col">
+                <h3 className="text-sm font-medium text-gray-700 mb-2">
+                  💬 AIと対話する
+                </h3>
+                <p className="text-xs text-gray-500 mb-4">
+                  目標、興味、読みたい本などを話してください
+                </p>
+                <div className="flex-1 min-h-0">
+                  <ProfileChatInterface onEntryAdded={fetchEntries} />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </section>
     </div>
   );
 }

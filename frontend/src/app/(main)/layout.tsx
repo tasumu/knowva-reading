@@ -42,18 +42,12 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
               ホーム
             </Link>
             <Link href="/readings" className="text-sm text-gray-600 hover:text-gray-900">
-              読書一覧
-            </Link>
-            <Link href="/mentor" className="text-sm text-gray-600 hover:text-gray-900">
-              メンター
-            </Link>
-            <Link href="/profile" className="text-sm text-gray-600 hover:text-gray-900">
-              あなた
+              読書記録
             </Link>
             <Link href="/pop" className="text-sm text-gray-600 hover:text-gray-900">
               POP
             </Link>
-            <Link href="/profile/settings" className="text-sm text-gray-600 hover:text-gray-900">
+            <Link href="/settings" className="text-sm text-gray-600 hover:text-gray-900">
               設定
             </Link>
             <button

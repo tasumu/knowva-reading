@@ -136,7 +136,7 @@ export default function PopPage() {
           </button>
         </div>
         <Link
-          href="/profile/settings"
+          href="/settings"
           className="ml-auto text-xs text-gray-400 hover:text-gray-600"
         >
           設定で変更

@@ -30,7 +30,7 @@ export default function MentorPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">🧭 メンター</h1>
+        <h1 className="text-2xl font-bold text-gray-900">🧭 振り返り</h1>
         <p className="text-sm text-gray-500 mt-1">
           あなたの読書生活をサポートします。振り返りや相談をしてみましょう。
         </p>

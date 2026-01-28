@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { apiClient } from "@/lib/api";
 import { Reading } from "@/lib/types";
 import { ReadingCard } from "@/components/readings/ReadingCard";
 import { ReadingForm } from "@/components/readings/ReadingForm";
 
 export default function ReadingsPage() {
+  const router = useRouter();
   const [readings, setReadings] = useState<Reading[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -27,8 +29,7 @@ export default function ReadingsPage() {
   }, []);
 
   const handleCreated = (reading: Reading) => {
-    setReadings((prev) => [reading, ...prev]);
-    setShowForm(false);
+    router.push(`/readings/${reading.id}`);
   };
 
   if (loading) {
@@ -38,7 +39,7 @@ export default function ReadingsPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">読書一覧</h1>
+        <h1 className="text-2xl font-bold text-gray-900">読書記録</h1>
         {!showForm && (
           <button
             onClick={() => setShowForm(true)}
