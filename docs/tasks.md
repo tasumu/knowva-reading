@@ -50,6 +50,145 @@
 
 ---
 
+## Phase 2.5 タスク（概要書機能 - 優先実装）
+
+概要書で定義されたコア機能。ユーザー価値が高いため、Phase 2より優先して実装する。
+
+### 読書レポート生成機能
+
+ソリューションの柱「**Contextual Wisdom（文脈によるナレッジ化）**」を実現する機能。
+**本単位**で個別のInsightを統合し、構造化された「美しい読書レポート」を生成する。
+
+**Mentor振り返りとの位置づけ:**
+| 機能 | 単位 | 目的 |
+|------|------|------|
+| 読書レポート | **本単位** | 1冊の読書体験を構造化・資産化 |
+| Mentor振り返り | ユーザー単位（期間） | 週次/月次の読書活動全体を称賛・アドバイス |
+
+- [ ] Report Agent の実装
+  - 入力: 該当Readingのセッション全メッセージ + Insight一覧 + プロファイル情報
+  - 出力: 構造化されたMarkdown/JSON形式のレポート
+  - 構成要素:
+    - **言語化された洞察** - 抽出したInsightの要約・構造化
+    - **文脈によるナレッジ化** - ユーザーの状況・目標との関連付け
+    - **アクションプラン** - 具体的な行動提案（下記参照）
+  - 生成タイミング: 読了時（status=completed）または手動リクエスト
+- [ ] Firestore データモデル: `/users/{userId}/readings/{readingId}/reports/{reportId}`
+  ```
+  {
+    id, reading_id, created_at, updated_at,
+    summary: string,           // レポート要約
+    insights_summary: string,  // Insightの統合要約
+    context_analysis: string,  // ユーザー文脈との関連分析
+    action_plan: ActionPlan[], // アクションプラン（後述）
+    metadata: {
+      session_count: number,
+      insight_count: number,
+      generation_model: string
+    }
+  }
+  ```
+- [ ] レポート生成API: `POST /api/readings/{readingId}/reports/generate`
+- [ ] レポート取得API: `GET /api/readings/{readingId}/reports`
+- [ ] レポート表示UI（`/readings/[id]/report`）
+- [ ] レポートのPDF/画像エクスポート機能（オプション）
+
+### アクションプラン生成機能
+
+ソリューションの柱「**Contextual Wisdom**」の具体的な成果物。
+読書から得た学びを、ユーザーの人生に適用する具体的なアクションへと変換する。
+
+- [ ] Reading Agent に `generate_action_plan` ツールを追加
+  - 読書から得た学びを具体的なアクションに変換
+  - プロファイル（目標・悩み）と紐づけたパーソナライズ
+  - 出力例:
+    ```
+    {
+      action: "毎朝15分、第2象限のタスクを洗い出す時間を設ける",
+      source_insight: "時間管理マトリクスで緊急ではないが重要なことに集中する",
+      relevance: "仕事の効率化という目標に直結",
+      difficulty: "easy",
+      timeframe: "1週間"
+    }
+    ```
+- [ ] Firestore データモデル: `/users/{userId}/readings/{readingId}/actionPlans/{planId}`
+  ```
+  {
+    id, reading_id, created_at, updated_at,
+    action: string,           // 具体的なアクション
+    source_insight_id: string?, // 関連するInsight
+    relevance: string,        // プロファイルとの関連性
+    difficulty: "easy" | "medium" | "hard",
+    timeframe: string,        // 実行目安期間
+    status: "pending" | "in_progress" | "completed" | "skipped",
+    completed_at?: timestamp
+  }
+  ```
+- [ ] アクションプラン管理API
+  - `POST /api/readings/{readingId}/action-plans` - 生成
+  - `GET /api/readings/{readingId}/action-plans` - 一覧取得
+  - `PATCH /api/readings/{readingId}/action-plans/{planId}` - ステータス更新
+- [ ] アクションプラン表示・管理UI
+  - 読書詳細画面にアクションプランセクション追加
+  - チェックリスト形式での進捗管理
+
+### ワンタップ音声入力機能
+
+ソリューションの柱「**Frictionless UX（没入を妨げない直感体験）**」を実現する機能。
+ホーム画面から最小の遷移で、ワンタップで音声入力を開始できる。
+
+- [ ] ワンタップ音声入力画面（`/quick-voice`）
+  - 画面中央に大きなマイクボタン（概要書イメージ参照）
+  - 「読書中に感じたことを、話しかけてください」のメッセージ
+  - クエリパラメータ: `?readingId={readingId}`
+  - リアルタイム文字起こし表示エリア
+- [ ] ホーム画面にFAB（フローティングアクションボタン）追加
+  - 現在「読書中」のReadingがある場合に表示
+  - タップで `/quick-voice?readingId={readingId}` に遷移
+  - 読書中のReadingがない場合は非表示または選択画面へ
+- [ ] 音声入力完了後の自動遷移
+  - 音声入力 → 確定ボタン → メッセージ送信（既存API）
+  - `/readings/{readingId}/chat` に自動遷移（AI応答を表示）
+- [ ] 既存コンポーネントの再利用
+  - `useSpeechRecognition` フック（完全再利用）
+  - `MicIcon` / `StopIcon` / `CheckIcon` SVG
+  - SSEストリーミング経由のメッセージ送信
+  - `input_type: "voice"` フラグ
+
+**UIフロー:**
+```
+ホーム画面
+    │ [FAB: マイクアイコン] をタップ
+    ▼
+/quick-voice?readingId={id}
+    │ 画面中央に大きなマイクボタン
+    │ [マイクボタン] をタップ → 録音開始
+    │ 発話 → リアルタイム文字起こし表示
+    │ [停止/確定ボタン] をタップ
+    ▼
+メッセージ送信 → /readings/{id}/chat に自動遷移
+```
+
+**実装ファイル（予定）:**
+| ファイル | 内容 |
+|---------|------|
+| `frontend/src/app/(main)/quick-voice/page.tsx` | ワンタップ音声入力画面 |
+| `frontend/src/components/quick-voice/QuickVoiceButton.tsx` | 大きなマイクボタンコンポーネント |
+| `frontend/src/app/(main)/home/page.tsx` | FAB追加（既存ファイル修正） |
+
+### マインドマップ出力（オプション）
+
+思考の構造化・可視化機能。優先度は中程度。
+
+- [ ] 対話内容・Insightをマインドマップ形式で可視化
+- [ ] 技術選定: Mermaid.js / react-flow / カスタムSVG
+- [ ] 既存MoodChart（レーダーチャート）との統一感あるデザイン
+- [ ] 中心ノード: 書籍タイトル
+- [ ] 子ノード: Insightカテゴリ（learning, impression, question, connection）
+- [ ] 葉ノード: 個別のInsight内容
+
+---
+
 ## Phase 2 タスク（未実装）
 
 以下の機能はドキュメントに記載されていますが、まだ実装されていません。
