@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { apiClient, getLatestMentorFeedback, chatWithMentor } from "@/lib/api";
-import { ProfileEntry, ProfileEntryType, AllInsightsResponse, MentorFeedback, MentorFeedbackType, Reading } from "@/lib/types";
+import { apiClient, getLatestMentorFeedback, chatWithMentor, getUserSettings } from "@/lib/api";
+import { ProfileEntry, ProfileEntryType, AllInsightsResponse, MentorFeedback, MentorFeedbackType, Reading, FabPosition } from "@/lib/types";
 import { ProfileChatInterface } from "@/components/profile/ProfileChatInterface";
 import { ProfileEntryList } from "@/components/profile/ProfileEntryList";
 import { ProfileEntryForm } from "@/components/profile/ProfileEntryForm";
@@ -26,6 +26,7 @@ export default function HomePage() {
   const [mentorMessage, setMentorMessage] = useState<string | null>(null);
   const [recentReadings, setRecentReadings] = useState<Reading[]>([]);
   const [allReadings, setAllReadings] = useState<Reading[]>([]);
+  const [fabPosition, setFabPosition] = useState<FabPosition | null>(null);
 
   const fetchEntries = useCallback(async () => {
     try {
@@ -78,6 +79,16 @@ export default function HomePage() {
     getLatestMentorFeedback()
       .then(setLatestFeedback)
       .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    getUserSettings()
+      .then((settings) => {
+        setFabPosition(settings.fab_position || "left");
+      })
+      .catch(() => {
+        setFabPosition("left");
+      });
   }, []);
 
   const handleQuickReflection = async (feedbackType: MentorFeedbackType) => {
@@ -162,7 +173,9 @@ export default function HomePage() {
       <h1 className="text-2xl font-bold text-gray-900">ホーム</h1>
 
       {/* ワンタップ音声入力FAB */}
-      <QuickVoiceFAB readings={readingInProgress} />
+      {fabPosition && fabPosition !== "none" && (
+        <QuickVoiceFAB readings={readingInProgress} position={fabPosition} />
+      )}
 
       {/* 振り返りセクション */}
       <section className="bg-white rounded-lg shadow-sm border border-gray-200">

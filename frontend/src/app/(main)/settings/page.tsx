@@ -9,7 +9,7 @@ import {
   getNickname,
   updateNickname,
 } from "@/lib/api";
-import { UserSettings, InteractionMode, TimelineOrder } from "@/lib/types";
+import { UserSettings, InteractionMode, TimelineOrder, FabPosition } from "@/lib/types";
 
 export default function SettingsPage() {
   const { user } = useAuth();
@@ -31,7 +31,7 @@ export default function SettingsPage() {
       setNicknameInput(nameData.name || "");
     } catch (error) {
       console.error("Failed to fetch settings:", error);
-      setUserSettings({ interaction_mode: "guided", timeline_order: "random" });
+      setUserSettings({ interaction_mode: "guided", timeline_order: "random", fab_position: "left" });
     } finally {
       setSettingsLoading(false);
     }
@@ -53,6 +53,15 @@ export default function SettingsPage() {
   const handleTimelineOrderChange = async (order: TimelineOrder) => {
     try {
       const updated = await updateUserSettings({ timeline_order: order });
+      setUserSettings(updated);
+    } catch (error) {
+      console.error("Failed to update settings:", error);
+    }
+  };
+
+  const handleFabPositionChange = async (position: FabPosition) => {
+    try {
+      const updated = await updateUserSettings({ fab_position: position });
       setUserSettings(updated);
     } catch (error) {
       console.error("Failed to update settings:", error);
@@ -253,6 +262,84 @@ export default function SettingsPage() {
               <div className="font-medium text-gray-900">新着順</div>
               <div className="text-sm text-gray-500 mt-1">
                 最近公開された気づきから順に表示します。最新の投稿を追いたい方向け。
+              </div>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      {/* 音声入力ボタン表示設定 */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">
+          音声入力ボタンの表示位置
+        </h2>
+        <p className="text-sm text-gray-500 mb-4">
+          ホーム画面に表示されるワンタップ録音ボタンの位置を設定できます。
+        </p>
+        <div className="space-y-3">
+          <label
+            className={`flex items-start p-4 border rounded-lg cursor-pointer transition-colors ${
+              (userSettings?.fab_position === "left" || !userSettings?.fab_position)
+                ? "border-blue-500 bg-blue-50"
+                : "border-gray-200 hover:border-gray-300"
+            }`}
+          >
+            <input
+              type="radio"
+              name="fab_position"
+              value="left"
+              checked={userSettings?.fab_position === "left" || !userSettings?.fab_position}
+              onChange={() => handleFabPositionChange("left")}
+              className="mt-1 mr-3"
+            />
+            <div>
+              <div className="font-medium text-gray-900">左下（デフォルト）</div>
+              <div className="text-sm text-gray-500 mt-1">
+                画面左下にボタンを表示します。
+              </div>
+            </div>
+          </label>
+          <label
+            className={`flex items-start p-4 border rounded-lg cursor-pointer transition-colors ${
+              userSettings?.fab_position === "right"
+                ? "border-blue-500 bg-blue-50"
+                : "border-gray-200 hover:border-gray-300"
+            }`}
+          >
+            <input
+              type="radio"
+              name="fab_position"
+              value="right"
+              checked={userSettings?.fab_position === "right"}
+              onChange={() => handleFabPositionChange("right")}
+              className="mt-1 mr-3"
+            />
+            <div>
+              <div className="font-medium text-gray-900">右下</div>
+              <div className="text-sm text-gray-500 mt-1">
+                画面右下にボタンを表示します。
+              </div>
+            </div>
+          </label>
+          <label
+            className={`flex items-start p-4 border rounded-lg cursor-pointer transition-colors ${
+              userSettings?.fab_position === "none"
+                ? "border-blue-500 bg-blue-50"
+                : "border-gray-200 hover:border-gray-300"
+            }`}
+          >
+            <input
+              type="radio"
+              name="fab_position"
+              value="none"
+              checked={userSettings?.fab_position === "none"}
+              onChange={() => handleFabPositionChange("none")}
+              className="mt-1 mr-3"
+            />
+            <div>
+              <div className="font-medium text-gray-900">非表示</div>
+              <div className="text-sm text-gray-500 mt-1">
+                ボタンを表示しません。読書詳細画面から音声入力は引き続き利用できます。
               </div>
             </div>
           </label>

@@ -65,7 +65,7 @@
 | 読書レポート | **本単位** | 1冊の読書体験を構造化・資産化 |
 | Mentor振り返り | ユーザー単位（期間） | 週次/月次の読書活動全体を称賛・アドバイス |
 
-- [ ] Report Agent の実装
+- [x] Report Agent の実装
   - 入力: 該当Readingのセッション全メッセージ + Insight一覧 + プロファイル情報
   - 出力: 構造化されたMarkdown/JSON形式のレポート
   - 構成要素:
@@ -73,7 +73,7 @@
     - **文脈によるナレッジ化** - ユーザーの状況・目標との関連付け
     - **アクションプラン** - 具体的な行動提案（下記参照）
   - 生成タイミング: 読了時（status=completed）または手動リクエスト
-- [ ] Firestore データモデル: `/users/{userId}/readings/{readingId}/reports/{reportId}`
+- [x] Firestore データモデル: `/users/{userId}/readings/{readingId}/reports/{reportId}`
   ```
   {
     id, reading_id, created_at, updated_at,
@@ -88,9 +88,9 @@
     }
   }
   ```
-- [ ] レポート生成API: `POST /api/readings/{readingId}/reports/generate`
-- [ ] レポート取得API: `GET /api/readings/{readingId}/reports`
-- [ ] レポート表示UI（`/readings/[id]/report`）
+- [x] レポート生成API: `POST /api/readings/{readingId}/reports/generate`
+- [x] レポート取得API: `GET /api/readings/{readingId}/reports`
+- [x] レポート表示UI（`/readings/[id]/report`）
 - [ ] レポートのPDF/画像エクスポート機能（オプション）
 
 ### アクションプラン生成機能
@@ -98,7 +98,7 @@
 ソリューションの柱「**Contextual Wisdom**」の具体的な成果物。
 読書から得た学びを、ユーザーの人生に適用する具体的なアクションへと変換する。
 
-- [ ] Reading Agent に `generate_action_plan` ツールを追加
+- [x] Report Agent に `generate_action_plan` 機能を統合
   - 読書から得た学びを具体的なアクションに変換
   - プロファイル（目標・悩み）と紐づけたパーソナライズ
   - 出力例:
@@ -111,7 +111,7 @@
       timeframe: "1週間"
     }
     ```
-- [ ] Firestore データモデル: `/users/{userId}/readings/{readingId}/actionPlans/{planId}`
+- [x] Firestore データモデル: `/users/{userId}/readings/{readingId}/actionPlans/{planId}`
   ```
   {
     id, reading_id, created_at, updated_at,
@@ -124,11 +124,11 @@
     completed_at?: timestamp
   }
   ```
-- [ ] アクションプラン管理API
+- [x] アクションプラン管理API
   - `POST /api/readings/{readingId}/action-plans` - 生成
   - `GET /api/readings/{readingId}/action-plans` - 一覧取得
   - `PATCH /api/readings/{readingId}/action-plans/{planId}` - ステータス更新
-- [ ] アクションプラン表示・管理UI
+- [x] アクションプラン表示・管理UI
   - 読書詳細画面にアクションプランセクション追加
   - チェックリスト形式での進捗管理
 
@@ -137,19 +137,20 @@
 ソリューションの柱「**Frictionless UX（没入を妨げない直感体験）**」を実現する機能。
 ホーム画面から最小の遷移で、ワンタップで音声入力を開始できる。
 
-- [ ] ワンタップ音声入力画面（`/quick-voice`）
+- [x] ワンタップ音声入力画面（`/quick-voice`）
   - 画面中央に大きなマイクボタン（概要書イメージ参照）
   - 「読書中に感じたことを、話しかけてください」のメッセージ
   - クエリパラメータ: `?readingId={readingId}`
   - リアルタイム文字起こし表示エリア
-- [ ] ホーム画面にFAB（フローティングアクションボタン）追加
+- [x] ホーム画面にFAB（フローティングアクションボタン）追加
   - 現在「読書中」のReadingがある場合に表示
   - タップで `/quick-voice?readingId={readingId}` に遷移
-  - 読書中のReadingがない場合は非表示または選択画面へ
-- [ ] 音声入力完了後の自動遷移
+  - 読書中のReadingがない場合は非表示
+  - FAB表示位置の設定機能（左/右/非表示）
+- [x] 音声入力完了後の自動遷移
   - 音声入力 → 確定ボタン → メッセージ送信（既存API）
   - `/readings/{readingId}/chat` に自動遷移（AI応答を表示）
-- [ ] 既存コンポーネントの再利用
+- [x] 既存コンポーネントの再利用
   - `useSpeechRecognition` フック（完全再利用）
   - `MicIcon` / `StopIcon` / `CheckIcon` SVG
   - SSEストリーミング経由のメッセージ送信
@@ -169,12 +170,14 @@
 メッセージ送信 → /readings/{id}/chat に自動遷移
 ```
 
-**実装ファイル（予定）:**
+**実装ファイル:**
 | ファイル | 内容 |
 |---------|------|
 | `frontend/src/app/(main)/quick-voice/page.tsx` | ワンタップ音声入力画面 |
 | `frontend/src/components/quick-voice/QuickVoiceButton.tsx` | 大きなマイクボタンコンポーネント |
+| `frontend/src/components/quick-voice/QuickVoiceFAB.tsx` | ホーム画面FABコンポーネント |
 | `frontend/src/app/(main)/home/page.tsx` | FAB追加（既存ファイル修正） |
+| `frontend/src/app/(main)/settings/page.tsx` | FAB位置設定UI |
 
 ### マインドマップ出力（オプション）
 

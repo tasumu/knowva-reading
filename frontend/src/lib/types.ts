@@ -266,10 +266,12 @@ export interface StreamingState {
 
 export type InteractionMode = "freeform" | "guided";
 export type TimelineOrder = "random" | "newest";
+export type FabPosition = "left" | "right" | "none";
 
 export interface UserSettings {
   interaction_mode: InteractionMode;
   timeline_order?: TimelineOrder;
+  fab_position?: FabPosition;
 }
 
 // --- メンター機能 ---

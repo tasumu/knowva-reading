@@ -7,6 +7,7 @@ from pydantic import BaseModel
 
 InteractionMode = Literal["freeform", "guided"]
 TimelineOrder = Literal["random", "newest"]
+FabPosition = Literal["left", "right", "none"]
 
 
 class UserSettings(BaseModel):
@@ -20,12 +21,18 @@ class UserSettings(BaseModel):
     # random: ランダム順（デフォルト）
     # newest: 新着順
 
+    fab_position: FabPosition = "left"
+    # left: 左下に表示（デフォルト）
+    # right: 右下に表示
+    # none: 非表示
+
 
 class UserSettingsUpdate(BaseModel):
     """ユーザー設定更新リクエスト"""
 
     interaction_mode: Optional[InteractionMode] = None
     timeline_order: Optional[TimelineOrder] = None
+    fab_position: Optional[FabPosition] = None
 
 
 class NameUpdateRequest(BaseModel):
