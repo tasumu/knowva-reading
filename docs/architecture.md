@@ -2,6 +2,16 @@
 
 ## アーキテクチャ思想：曖昧さと再解釈の許容
 
+### ソリューションの3つの柱と技術の対応
+
+Knowvaのコア価値を実現するための技術アーキテクチャ:
+
+| 柱 | 説明 | 実現する技術 |
+|----|------|------------|
+| **Deep Verbalization** | 言語化支援と深掘り | Reading Agent + guided/freeformモード + Insight自動保存 |
+| **Contextual Wisdom** | 文脈によるナレッジ化 | プロファイル + Reading Context + 読書レポート生成（Phase 2.5） |
+| **Frictionless UX** | 没入を妨げない直感体験 | 音声入力（Web Speech API）+ SSEストリーミング + ワンタップUI |
+
 ### システム構成の全体像
 
 Knowvaは**長期保存を本丸**として、以下の3層構成で設計します：
