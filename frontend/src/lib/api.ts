@@ -10,6 +10,8 @@ import type {
   SSEMessageDoneData,
   SSEErrorData,
   UserSettings,
+  UserProfile,
+  UserProfileUpdate,
   MentorFeedback,
   MentorMessage,
   MentorFeedbackType,
@@ -167,6 +169,27 @@ export async function sendMessageStream(
     }
     callbacks.onConnectionError?.(error as Error);
   }
+}
+
+// --- ユーザープロフィールAPI ---
+
+/**
+ * ユーザープロフィールを取得する
+ */
+export async function getUserProfile(): Promise<UserProfile> {
+  return apiClient<UserProfile>("/api/profile/current");
+}
+
+/**
+ * ユーザープロフィールを更新する
+ */
+export async function updateUserProfile(
+  profile: UserProfileUpdate
+): Promise<UserProfile> {
+  return apiClient<UserProfile>("/api/profile/current", {
+    method: "PUT",
+    body: JSON.stringify(profile),
+  });
 }
 
 // --- ユーザー設定API ---

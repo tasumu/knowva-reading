@@ -8,8 +8,65 @@ import {
   updateUserSettings,
   getNickname,
   updateNickname,
+  getUserProfile,
+  updateUserProfile,
 } from "@/lib/api";
-import { UserSettings, InteractionMode, TimelineOrder, FabPosition } from "@/lib/types";
+import { UserSettings, UserProfile, InteractionMode, TimelineOrder, FabPosition } from "@/lib/types";
+
+// プロフィール選択肢
+const LIFE_STAGE_OPTIONS = [
+  { value: "student", label: "学生" },
+  { value: "early_career", label: "若手社会人（1-5年目）" },
+  { value: "mid_career", label: "中堅社会人（6-15年目）" },
+  { value: "manager", label: "管理職・マネージャー" },
+  { value: "executive", label: "経営者・役員" },
+  { value: "freelance", label: "フリーランス・自営業" },
+  { value: "other", label: "その他" },
+];
+
+const CHALLENGE_OPTIONS = [
+  { value: "career", label: "キャリアの方向性" },
+  { value: "skill", label: "スキルアップ" },
+  { value: "communication", label: "人間関係・コミュニケーション" },
+  { value: "management", label: "マネジメント・リーダーシップ" },
+  { value: "balance", label: "ワークライフバランス" },
+  { value: "self", label: "自己理解・自分探し" },
+  { value: "money", label: "お金・資産形成" },
+  { value: "health", label: "健康・メンタル" },
+];
+
+const VALUE_OPTIONS = [
+  { value: "growth", label: "成長・学び" },
+  { value: "freedom", label: "自由・独立" },
+  { value: "stability", label: "安定・安心" },
+  { value: "contribution", label: "貢献・社会への影響" },
+  { value: "creativity", label: "創造性・表現" },
+  { value: "connection", label: "人とのつながり" },
+  { value: "integrity", label: "誠実さ・正直さ" },
+  { value: "challenge", label: "挑戦・冒険" },
+];
+
+const MOTIVATION_OPTIONS = [
+  { value: "skill", label: "仕事に活かす知識・スキルを得たい" },
+  { value: "perspective", label: "視野を広げ、新しい考え方に触れたい" },
+  { value: "relax", label: "リラックス・気分転換" },
+  { value: "culture", label: "教養を身につけたい" },
+  { value: "self_reflection", label: "自分自身を見つめ直したい" },
+  { value: "problem_solving", label: "特定の課題を解決したい" },
+];
+
+const INTEREST_OPTIONS = [
+  { value: "business", label: "ビジネス・経営" },
+  { value: "self_help", label: "自己啓発・成長" },
+  { value: "fiction", label: "小説・文学" },
+  { value: "history", label: "歴史・伝記" },
+  { value: "science", label: "科学・テクノロジー" },
+  { value: "philosophy", label: "哲学・思想" },
+  { value: "psychology", label: "心理学・脳科学" },
+  { value: "society", label: "社会・経済" },
+  { value: "art", label: "アート・デザイン" },
+  { value: "other", label: "その他" },
+];
 
 export default function SettingsPage() {
   const { user } = useAuth();
@@ -20,15 +77,23 @@ export default function SettingsPage() {
   const [nicknameLoading, setNicknameLoading] = useState(false);
   const [nicknameSaved, setNicknameSaved] = useState(false);
 
+  // プロフィール関連state
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileSaved, setProfileSaved] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+
   const fetchSettings = useCallback(async () => {
     try {
-      const [settings, nameData] = await Promise.all([
+      const [settings, nameData, profileData] = await Promise.all([
         getUserSettings(),
         getNickname(),
+        getUserProfile(),
       ]);
       setUserSettings(settings);
       setNickname(nameData.name || "");
       setNicknameInput(nameData.name || "");
+      setProfile(profileData);
     } catch (error) {
       console.error("Failed to fetch settings:", error);
       setUserSettings({ interaction_mode: "guided", timeline_order: "random", fab_position: "left" });
@@ -83,6 +148,30 @@ export default function SettingsPage() {
     } finally {
       setNicknameLoading(false);
     }
+  };
+
+  // プロフィール更新ハンドラー
+  const handleProfileUpdate = async (field: keyof UserProfile, value: string | string[]) => {
+    if (!profile) return;
+
+    setProfileLoading(true);
+    try {
+      const updated = await updateUserProfile({ [field]: value });
+      setProfile(updated);
+      setProfileSaved(true);
+      setTimeout(() => setProfileSaved(false), 2000);
+    } catch (error) {
+      console.error("Failed to update profile:", error);
+    } finally {
+      setProfileLoading(false);
+    }
+  };
+
+  const toggleArrayItem = (currentArray: string[], item: string): string[] => {
+    if (currentArray.includes(item)) {
+      return currentArray.filter((v) => v !== item);
+    }
+    return [...currentArray, item];
   };
 
   if (settingsLoading) {
@@ -148,6 +237,163 @@ export default function SettingsPage() {
             </div>
           </div>
         </div>
+      </section>
+
+      {/* プロフィール設定セクション */}
+      <section className="bg-white rounded-lg shadow-sm border border-gray-200">
+        <button
+          onClick={() => setIsProfileOpen(!isProfileOpen)}
+          className="w-full flex items-center justify-between p-6 text-left"
+        >
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">あなたについて</h2>
+            <p className="text-sm text-gray-500 mt-1">
+              AIがより適切な対話をするための情報です
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            {profileSaved && (
+              <span className="text-sm text-green-600">保存しました</span>
+            )}
+            {profileLoading && (
+              <span className="text-sm text-gray-500">保存中...</span>
+            )}
+            <svg
+              className={`w-5 h-5 text-gray-500 transition-transform ${isProfileOpen ? "rotate-180" : ""}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+        </button>
+
+        {isProfileOpen && profile && (
+          <div className="px-6 pb-6 space-y-6">
+            {/* ライフステージ */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                ライフステージ
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {LIFE_STAGE_OPTIONS.map((option) => (
+                  <button
+                    key={option.value}
+                    onClick={() => handleProfileUpdate("life_stage", option.label)}
+                    className={`px-3 py-2 rounded-full text-sm transition-colors ${
+                      profile.life_stage === option.label
+                        ? "bg-blue-500 text-white"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 課題・悩み */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                課題・悩み（複数選択可）
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {CHALLENGE_OPTIONS.map((option) => (
+                  <button
+                    key={option.value}
+                    onClick={() => {
+                      const newChallenges = toggleArrayItem(profile.challenges || [], option.label);
+                      handleProfileUpdate("challenges", newChallenges);
+                    }}
+                    className={`px-3 py-2 rounded-full text-sm transition-colors ${
+                      profile.challenges?.includes(option.label)
+                        ? "bg-orange-500 text-white"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 大切にしていること */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                大切にしていること（複数選択可）
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {VALUE_OPTIONS.map((option) => (
+                  <button
+                    key={option.value}
+                    onClick={() => {
+                      const newValues = toggleArrayItem(profile.values || [], option.label);
+                      handleProfileUpdate("values", newValues);
+                    }}
+                    className={`px-3 py-2 rounded-full text-sm transition-colors ${
+                      profile.values?.includes(option.label)
+                        ? "bg-purple-500 text-white"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 読書の目的 */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                読書の目的（複数選択可）
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {MOTIVATION_OPTIONS.map((option) => (
+                  <button
+                    key={option.value}
+                    onClick={() => {
+                      const newMotivations = toggleArrayItem(profile.reading_motivations || [], option.label);
+                      handleProfileUpdate("reading_motivations", newMotivations);
+                    }}
+                    className={`px-3 py-2 rounded-full text-sm transition-colors ${
+                      profile.reading_motivations?.includes(option.label)
+                        ? "bg-green-500 text-white"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 興味のあるジャンル */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                興味のあるジャンル（複数選択可）
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {INTEREST_OPTIONS.map((option) => (
+                  <button
+                    key={option.value}
+                    onClick={() => {
+                      const newInterests = toggleArrayItem(profile.interests || [], option.label);
+                      handleProfileUpdate("interests", newInterests);
+                    }}
+                    className={`px-3 py-2 rounded-full text-sm transition-colors ${
+                      profile.interests?.includes(option.label)
+                        ? "bg-teal-500 text-white"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </section>
 
       {/* 対話モード設定セクション */}

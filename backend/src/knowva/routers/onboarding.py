@@ -29,8 +29,9 @@ async def submit_onboarding(
     user_id = user["uid"]
     badges_earned = []
 
-    # 1. ニックネームを保存
-    await firestore.update_user_name(user_id, body.nickname)
+    # 1. ニックネームを保存（入力がある場合のみ）
+    if body.nickname and body.nickname.strip():
+        await firestore.update_user_name(user_id, body.nickname.strip())
 
     # 2. current_profileに構造化情報を保存
     profile_data = {
@@ -38,7 +39,7 @@ async def submit_onboarding(
         "situation": body.situation,
         "challenges": body.challenges,
         "values": body.values,
-        "reading_motivation": body.reading_motivation,
+        "reading_motivations": body.reading_motivations,
     }
     await firestore.update_user_profile(user_id, profile_data)
 

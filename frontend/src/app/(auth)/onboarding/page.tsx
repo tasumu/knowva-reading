@@ -9,7 +9,7 @@ import { StepNickname } from "@/components/onboarding/StepNickname";
 import { StepLifeStage } from "@/components/onboarding/StepLifeStage";
 import { StepChallenges, CHALLENGE_OPTIONS } from "@/components/onboarding/StepChallenges";
 import { StepValues, VALUE_OPTIONS } from "@/components/onboarding/StepValues";
-import { StepReadingMotivation } from "@/components/onboarding/StepReadingMotivation";
+import { StepReadingMotivation, MOTIVATION_OPTIONS } from "@/components/onboarding/StepReadingMotivation";
 import { StepInterests, INTEREST_OPTIONS } from "@/components/onboarding/StepInterests";
 
 const TOTAL_STEPS = 6;
@@ -26,7 +26,7 @@ export default function OnboardingPage() {
   const [lifeStage, setLifeStage] = useState("");
   const [challenges, setChallenges] = useState<string[]>([]);
   const [values, setValues] = useState<string[]>([]);
-  const [readingMotivation, setReadingMotivation] = useState("");
+  const [readingMotivations, setReadingMotivations] = useState<string[]>([]);
   const [interests, setInterests] = useState<string[]>([]);
 
   // 認証チェック
@@ -57,22 +57,8 @@ export default function OnboardingPage() {
   }, [user, router]);
 
   const canProceed = () => {
-    switch (currentStep) {
-      case 0:
-        return nickname.trim().length > 0;
-      case 1:
-        return lifeStage !== "";
-      case 2:
-        return true; // challenges はスキップ可能
-      case 3:
-        return true; // values はスキップ可能
-      case 4:
-        return readingMotivation !== "";
-      case 5:
-        return true; // interests はスキップ可能
-      default:
-        return false;
-    }
+    // すべてのステップでスキップ可能
+    return true;
   };
 
   const handleNext = async () => {
@@ -93,7 +79,7 @@ export default function OnboardingPage() {
   const handleSubmit = async () => {
     setLoading(true);
     try {
-      // challenges と values のラベルを取得
+      // 選択値からラベルを取得
       const challengeLabels = challenges.map((c) => {
         const option = CHALLENGE_OPTIONS.find((o) => o.value === c);
         return option ? option.label : c;
@@ -104,17 +90,22 @@ export default function OnboardingPage() {
         return option ? option.label : v;
       });
 
+      const motivationLabels = readingMotivations.map((m) => {
+        const option = MOTIVATION_OPTIONS.find((o) => o.value === m);
+        return option ? option.label : m;
+      });
+
       const interestLabels = interests.map((i) => {
         const option = INTEREST_OPTIONS.find((o) => o.value === i);
         return option ? option.label : i;
       });
 
       await submitOnboarding({
-        nickname,
-        life_stage: lifeStage,
+        nickname: nickname || undefined,
+        life_stage: lifeStage || undefined,
         challenges: challengeLabels,
         values: valueLabels,
-        reading_motivation: readingMotivation,
+        reading_motivations: motivationLabels,
         interests: interestLabels,
         book_wishes: [],
       });
@@ -123,6 +114,25 @@ export default function OnboardingPage() {
     } catch (error) {
       console.error("Failed to submit onboarding:", error);
       alert("送信に失敗しました。もう一度お試しください。");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSkipAll = async () => {
+    setLoading(true);
+    try {
+      await submitOnboarding({
+        challenges: [],
+        values: [],
+        reading_motivations: [],
+        interests: [],
+        book_wishes: [],
+      });
+      router.push("/home");
+    } catch (error) {
+      console.error("Failed to skip onboarding:", error);
+      alert("スキップに失敗しました。もう一度お試しください。");
     } finally {
       setLoading(false);
     }
@@ -153,8 +163,8 @@ export default function OnboardingPage() {
       case 4:
         return (
           <StepReadingMotivation
-            value={readingMotivation}
-            onChange={setReadingMotivation}
+            value={readingMotivations}
+            onChange={setReadingMotivations}
           />
         );
       case 5:
@@ -168,9 +178,19 @@ export default function OnboardingPage() {
     <div className="flex items-center justify-center min-h-screen bg-gray-50 p-4">
       <div className="w-full max-w-md bg-white rounded-lg shadow-md p-6">
         <div className="mb-6">
-          <h1 className="text-center text-xl font-bold text-gray-900 mb-4">
-            Knowva へようこそ
-          </h1>
+          <div className="flex items-center justify-between mb-4">
+            <h1 className="text-xl font-bold text-gray-900">
+              Knowva へようこそ
+            </h1>
+            <button
+              type="button"
+              onClick={handleSkipAll}
+              disabled={loading}
+              className="text-sm text-gray-500 hover:text-gray-700"
+            >
+              スキップ
+            </button>
+          </div>
           <OnboardingProgress
             currentStep={currentStep}
             totalSteps={TOTAL_STEPS}

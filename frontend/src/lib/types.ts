@@ -102,7 +102,17 @@ export interface UserProfile {
   situation?: string;
   challenges: string[];
   values: string[];
-  reading_motivation?: string;
+  reading_motivations: string[];
+  interests: string[];
+}
+
+export interface UserProfileUpdate {
+  life_stage?: string;
+  situation?: string;
+  challenges?: string[];
+  values?: string[];
+  reading_motivations?: string[];
+  interests?: string[];
 }
 
 export interface ProfileData {
@@ -370,12 +380,12 @@ export interface ActionPlanUpdateInput {
 // --- オンボーディング ---
 
 export interface OnboardingSubmit {
-  nickname: string;
-  life_stage: string;
+  nickname?: string;
+  life_stage?: string;
   situation?: string;
   challenges: string[];
   values: string[];
-  reading_motivation: string;
+  reading_motivations: string[];
   interests: string[];
   book_wishes: string[];
 }

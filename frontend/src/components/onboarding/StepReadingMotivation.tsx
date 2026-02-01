@@ -10,14 +10,22 @@ const MOTIVATION_OPTIONS = [
 ];
 
 interface StepReadingMotivationProps {
-  value: string;
-  onChange: (value: string) => void;
+  value: string[];
+  onChange: (value: string[]) => void;
 }
 
 export function StepReadingMotivation({
   value,
   onChange,
 }: StepReadingMotivationProps) {
+  const toggleOption = (optionValue: string) => {
+    if (value.includes(optionValue)) {
+      onChange(value.filter((v) => v !== optionValue));
+    } else {
+      onChange([...value, optionValue]);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div>
@@ -25,7 +33,7 @@ export function StepReadingMotivation({
           読書の目的は？
         </h2>
         <p className="text-sm text-gray-600">
-          一番近いものを選んでください。
+          当てはまるものを選んでください（複数選択可）
         </p>
       </div>
       <div className="grid gap-2">
@@ -33,9 +41,9 @@ export function StepReadingMotivation({
           <button
             key={option.value}
             type="button"
-            onClick={() => onChange(option.value)}
+            onClick={() => toggleOption(option.value)}
             className={`w-full px-4 py-3 text-left rounded-lg border transition-colors ${
-              value === option.value
+              value.includes(option.value)
                 ? "border-blue-500 bg-blue-50 text-blue-700"
                 : "border-gray-300 bg-white text-gray-700 hover:border-gray-400"
             }`}
@@ -44,6 +52,9 @@ export function StepReadingMotivation({
           </button>
         ))}
       </div>
+      <p className="text-xs text-gray-400">
+        選択中: {value.length}件（スキップも可能です）
+      </p>
     </div>
   );
 }
