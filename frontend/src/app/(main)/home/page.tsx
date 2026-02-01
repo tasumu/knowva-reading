@@ -9,6 +9,7 @@ import { ProfileEntryForm } from "@/components/profile/ProfileEntryForm";
 import { InsightList } from "@/components/profile/InsightList";
 import { ReadingCard } from "@/components/readings/ReadingCard";
 import { QuickVoiceFAB } from "@/components/quick-voice/QuickVoiceFAB";
+import { BadgeSection } from "@/components/badges/BadgeSection";
 import Link from "next/link";
 
 export default function HomePage() {
@@ -176,6 +177,9 @@ export default function HomePage() {
       {fabPosition && fabPosition !== "none" && (
         <QuickVoiceFAB readings={readingInProgress} position={fabPosition} />
       )}
+
+      {/* バッジセクション */}
+      <BadgeSection />
 
       {/* 振り返りセクション */}
       <section className="bg-white rounded-lg shadow-sm border border-gray-200">

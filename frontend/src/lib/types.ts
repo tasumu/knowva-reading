@@ -366,3 +366,50 @@ export interface ActionPlan {
 export interface ActionPlanUpdateInput {
   status?: ActionPlanStatus;
 }
+
+// --- オンボーディング ---
+
+export interface OnboardingSubmit {
+  nickname: string;
+  life_stage: string;
+  situation?: string;
+  challenges: string[];
+  values: string[];
+  reading_motivation: string;
+  interests: string[];
+  book_wishes: string[];
+}
+
+export interface OnboardingStatus {
+  completed: boolean;
+  completed_at?: string;
+}
+
+export interface OnboardingResponse {
+  status: string;
+  badges_earned: string[];
+}
+
+// --- バッジ ---
+
+export type BadgeCategory = "reading" | "onboarding" | "insight";
+
+export interface BadgeDefinition {
+  id: string;
+  name: string;
+  description: string;
+  category: BadgeCategory;
+  color: string;
+}
+
+export interface UserBadge {
+  id: string;
+  badge_id: string;
+  earned_at: string;
+  context?: Record<string, unknown>;
+}
+
+export interface BadgeCheckResponse {
+  new_badges: UserBadge[];
+  all_badges: UserBadge[];
+}
