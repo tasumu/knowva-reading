@@ -33,28 +33,18 @@ async def submit_onboarding(
     if body.nickname and body.nickname.strip():
         await firestore.update_user_name(user_id, body.nickname.strip())
 
-    # 2. current_profileに構造化情報を保存
+    # 2. current_profileに構造化情報を保存（interestsも含む）
     profile_data = {
         "life_stage": body.life_stage,
         "situation": body.situation,
         "challenges": body.challenges,
         "values": body.values,
         "reading_motivations": body.reading_motivations,
+        "interests": body.interests,
     }
     await firestore.update_user_profile(user_id, profile_data)
 
     # 3. profileEntriesに非構造的情報を保存
-    # 興味のあるジャンル
-    for interest in body.interests:
-        await firestore.save_profile_entry(
-            user_id,
-            {
-                "entry_type": "interest",
-                "content": interest,
-                "note": "オンボーディングで登録",
-            },
-        )
-
     # 読みたい本
     for book_wish in body.book_wishes:
         if book_wish.strip():  # 空文字でない場合のみ

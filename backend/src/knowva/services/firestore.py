@@ -221,10 +221,12 @@ async def list_insights(user_id: str, reading_id: str) -> list[dict]:
 
 
 async def get_user_profile(user_id: str) -> Optional[dict]:
+    """ユーザーのcurrent_profileを取得する。"""
     db: AsyncClient = get_firestore_client()
     doc = await db.collection("users").document(user_id).get()
     if doc.exists:
-        return {"user_id": doc.id, **doc.to_dict()}
+        data = doc.to_dict()
+        return data.get("current_profile", {})
     return None
 
 

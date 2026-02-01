@@ -26,7 +26,16 @@ export function BadgeList({
     ? definitions
     : definitions.filter((d) => earnedBadgeIds.has(d.id));
 
-  if (badgesToShow.length === 0) {
+  // 達成済みを先に表示するようソート
+  const sortedBadges = [...badgesToShow].sort((a, b) => {
+    const aEarned = earnedBadgeIds.has(a.id);
+    const bEarned = earnedBadgeIds.has(b.id);
+    if (aEarned && !bEarned) return -1;
+    if (!aEarned && bEarned) return 1;
+    return 0;
+  });
+
+  if (sortedBadges.length === 0) {
     return (
       <p className="text-sm text-gray-400">
         まだバッジを獲得していません
@@ -36,7 +45,7 @@ export function BadgeList({
 
   return (
     <div className="flex flex-wrap gap-2">
-      {badgesToShow.map((definition) => {
+      {sortedBadges.map((definition) => {
         const userBadge = userBadges.find((b) => b.badge_id === definition.id);
         return (
           <Badge

@@ -6,7 +6,7 @@ import { useAuth } from "@/providers/AuthProvider";
 import { submitOnboarding, getOnboardingStatus } from "@/lib/api";
 import { OnboardingProgress } from "@/components/onboarding/OnboardingProgress";
 import { StepNickname } from "@/components/onboarding/StepNickname";
-import { StepLifeStage } from "@/components/onboarding/StepLifeStage";
+import { StepLifeStage, LIFE_STAGE_OPTIONS } from "@/components/onboarding/StepLifeStage";
 import { StepChallenges, CHALLENGE_OPTIONS } from "@/components/onboarding/StepChallenges";
 import { StepValues, VALUE_OPTIONS } from "@/components/onboarding/StepValues";
 import { StepReadingMotivation, MOTIVATION_OPTIONS } from "@/components/onboarding/StepReadingMotivation";
@@ -100,9 +100,14 @@ export default function OnboardingPage() {
         return option ? option.label : i;
       });
 
+      // ライフステージを値からラベルに変換
+      const lifeStageLabel = lifeStage
+        ? LIFE_STAGE_OPTIONS.find((o) => o.value === lifeStage)?.label || lifeStage
+        : undefined;
+
       await submitOnboarding({
         nickname: nickname || undefined,
-        life_stage: lifeStage || undefined,
+        life_stage: lifeStageLabel,
         challenges: challengeLabels,
         values: valueLabels,
         reading_motivations: motivationLabels,
@@ -188,7 +193,7 @@ export default function OnboardingPage() {
               disabled={loading}
               className="text-sm text-gray-500 hover:text-gray-700"
             >
-              スキップ
+              すべてスキップ
             </button>
           </div>
           <OnboardingProgress

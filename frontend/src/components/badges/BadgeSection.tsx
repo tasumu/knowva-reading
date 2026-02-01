@@ -9,7 +9,7 @@ interface BadgeSectionProps {
   showAll?: boolean;
 }
 
-export function BadgeSection({ showAll = false }: BadgeSectionProps) {
+export function BadgeSection({ showAll = true }: BadgeSectionProps) {
   const [definitions, setDefinitions] = useState<BadgeDefinition[]>([]);
   const [userBadges, setUserBadges] = useState<UserBadge[]>([]);
   const [loading, setLoading] = useState(true);

@@ -10,8 +10,12 @@ import {
   updateNickname,
   getUserProfile,
   updateUserProfile,
+  apiClient,
 } from "@/lib/api";
-import { UserSettings, UserProfile, InteractionMode, TimelineOrder, FabPosition } from "@/lib/types";
+import { UserSettings, UserProfile, InteractionMode, TimelineOrder, FabPosition, ProfileEntry, ProfileEntryType } from "@/lib/types";
+import { ProfileEntryList } from "@/components/profile/ProfileEntryList";
+import { ProfileEntryForm } from "@/components/profile/ProfileEntryForm";
+import { ProfileChatInterface } from "@/components/profile/ProfileChatInterface";
 
 // プロフィール選択肢
 const LIFE_STAGE_OPTIONS = [
@@ -83,22 +87,37 @@ export default function SettingsPage() {
   const [profileSaved, setProfileSaved] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
+  // プロフィールエントリ関連state
+  const [entries, setEntries] = useState<ProfileEntry[]>([]);
+  const [showAddForm, setShowAddForm] = useState(false);
+
   const fetchSettings = useCallback(async () => {
     try {
-      const [settings, nameData, profileData] = await Promise.all([
+      const [settings, nameData, profileData, entriesData] = await Promise.all([
         getUserSettings(),
         getNickname(),
         getUserProfile(),
+        apiClient<ProfileEntry[]>("/api/profile/entries"),
       ]);
       setUserSettings(settings);
       setNickname(nameData.name || "");
       setNicknameInput(nameData.name || "");
       setProfile(profileData);
+      setEntries(entriesData);
     } catch (error) {
       console.error("Failed to fetch settings:", error);
       setUserSettings({ interaction_mode: "guided", timeline_order: "random", fab_position: "left" });
     } finally {
       setSettingsLoading(false);
+    }
+  }, []);
+
+  const fetchEntries = useCallback(async () => {
+    try {
+      const data = await apiClient<ProfileEntry[]>("/api/profile/entries");
+      setEntries(data);
+    } catch (error) {
+      console.error("Failed to fetch entries:", error);
     }
   }, []);
 
@@ -172,6 +191,52 @@ export default function SettingsPage() {
       return currentArray.filter((v) => v !== item);
     }
     return [...currentArray, item];
+  };
+
+  const handleAddEntry = async (data: {
+    entry_type: ProfileEntryType;
+    content: string;
+    note?: string;
+  }) => {
+    try {
+      const newEntry = await apiClient<ProfileEntry>("/api/profile/entries", {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
+      setEntries((prev) => [newEntry, ...prev]);
+      setShowAddForm(false);
+    } catch (error) {
+      console.error("Failed to add entry:", error);
+    }
+  };
+
+  const handleEditEntry = async (
+    entryId: string,
+    data: { entry_type: ProfileEntryType; content: string; note?: string }
+  ) => {
+    try {
+      const updated = await apiClient<ProfileEntry>(
+        `/api/profile/entries/${entryId}`,
+        {
+          method: "PUT",
+          body: JSON.stringify(data),
+        }
+      );
+      setEntries((prev) =>
+        prev.map((e) => (e.id === entryId ? updated : e))
+      );
+    } catch (error) {
+      console.error("Failed to update entry:", error);
+    }
+  };
+
+  const handleDeleteEntry = async (entryId: string) => {
+    try {
+      await apiClient(`/api/profile/entries/${entryId}`, { method: "DELETE" });
+      setEntries((prev) => prev.filter((e) => e.id !== entryId));
+    } catch (error) {
+      console.error("Failed to delete entry:", error);
+    }
   };
 
   if (settingsLoading) {
@@ -390,6 +455,68 @@ export default function SettingsPage() {
                     {option.label}
                   </button>
                 ))}
+              </div>
+            </div>
+
+            {/* 区切り線 */}
+            <hr className="border-gray-200" />
+
+            {/* プロフィール情報とAI対話 */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* 左側: エントリ一覧 */}
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-medium text-gray-700">その他の情報</h3>
+                  {!showAddForm && (
+                    <button
+                      onClick={() => setShowAddForm(true)}
+                      className="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                    >
+                      + 手動で追加
+                    </button>
+                  )}
+                </div>
+
+                {showAddForm && (
+                  <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <h4 className="text-sm font-medium text-gray-700 mb-3">
+                      新規追加
+                    </h4>
+                    <ProfileEntryForm
+                      onSave={handleAddEntry}
+                      onCancel={() => setShowAddForm(false)}
+                    />
+                  </div>
+                )}
+
+                <p className="text-xs text-gray-500 mb-3">
+                  読書中の対話からも自動的に追加されます
+                </p>
+
+                {entries.length === 0 && !showAddForm ? (
+                  <p className="text-sm text-gray-400 text-center py-4">
+                    まだ情報がありません。AIと対話するか、手動で追加しましょう。
+                  </p>
+                ) : (
+                  <ProfileEntryList
+                    entries={entries}
+                    onDelete={handleDeleteEntry}
+                    onEdit={handleEditEntry}
+                  />
+                )}
+              </div>
+
+              {/* 右側: 対話エリア */}
+              <div className="flex flex-col">
+                <h3 className="text-sm font-medium text-gray-700 mb-2">
+                  AIと対話する
+                </h3>
+                <p className="text-xs text-gray-500 mb-4">
+                  目標、興味、読みたい本などを話してください
+                </p>
+                <div className="flex-1 min-h-0">
+                  <ProfileChatInterface onEntryAdded={fetchEntries} />
+                </div>
               </div>
             </div>
           </div>
