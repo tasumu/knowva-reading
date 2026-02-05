@@ -7,6 +7,7 @@ import { signOut } from "firebase/auth";
 import { useAuth } from "@/providers/AuthProvider";
 import { auth } from "@/lib/firebase";
 import { getOnboardingStatus } from "@/lib/api";
+import { BottomNavigation } from "@/components/layout/BottomNavigation";
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const { user, loading, emailVerified, isAnonymous } = useAuth();
@@ -106,7 +107,8 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
           </nav>
         </div>
       </header>
-      <main className="max-w-5xl mx-auto px-4 py-6">{children}</main>
+      <main className="max-w-5xl mx-auto px-4 py-6 pb-20 md:pb-6">{children}</main>
+      <BottomNavigation />
     </div>
   );
 }
