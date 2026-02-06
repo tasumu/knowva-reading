@@ -26,8 +26,8 @@ const VISIBILITY_OPTIONS: {
   },
   {
     value: "anonymous",
-    label: "匿名",
-    shortLabel: "匿名",
+    label: "匿名公開",
+    shortLabel: "匿名公開",
   },
 ];
 

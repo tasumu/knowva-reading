@@ -495,9 +495,10 @@ async def get_user_settings(user_id: str) -> dict:
             "interaction_mode": settings.get("interaction_mode", "guided"),
             "timeline_order": settings.get("timeline_order", "random"),
             "fab_position": settings.get("fab_position", "left"),
+            "chat_initiator": settings.get("chat_initiator", "ai"),
         }
     # ドキュメントが存在しない場合はデフォルト値
-    return {"interaction_mode": "guided", "timeline_order": "random", "fab_position": "left"}
+    return {"interaction_mode": "guided", "timeline_order": "random", "fab_position": "left", "chat_initiator": "ai"}
 
 
 async def update_user_settings(user_id: str, settings: dict) -> dict:
