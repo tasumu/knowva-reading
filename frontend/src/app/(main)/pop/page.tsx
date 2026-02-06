@@ -83,7 +83,13 @@ export default function PopPage() {
       {/* ヘッダー */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">POP</h1>
+          <Link
+            href="/home"
+            className="text-sm text-blue-600 hover:underline"
+          >
+            &larr; ホームに戻る
+          </Link>
+          <h1 className="text-2xl font-bold text-gray-900 mt-2">POP</h1>
           <p className="text-sm text-gray-500 mt-1">
             みんなの読書から生まれた気づき
           </p>

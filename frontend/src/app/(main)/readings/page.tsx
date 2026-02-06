@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { apiClient } from "@/lib/api";
 import { Reading } from "@/lib/types";
@@ -39,7 +40,13 @@ export default function ReadingsPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <Link
+        href="/home"
+        className="text-sm text-blue-600 hover:underline"
+      >
+        &larr; ホームに戻る
+      </Link>
+      <div className="flex items-center justify-between mb-6 mt-2">
         <h1 className="text-2xl font-bold text-gray-900">読書記録</h1>
         {!showForm && (
           <button
