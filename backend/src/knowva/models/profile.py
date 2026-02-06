@@ -8,6 +8,7 @@ from pydantic import BaseModel
 InteractionMode = Literal["freeform", "guided"]
 TimelineOrder = Literal["random", "newest"]
 FabPosition = Literal["left", "right", "none"]
+ChatInitiator = Literal["ai", "user"]
 
 
 class UserSettings(BaseModel):
@@ -26,6 +27,10 @@ class UserSettings(BaseModel):
     # right: 右下に表示
     # none: 非表示
 
+    chat_initiator: ChatInitiator = "ai"
+    # ai: AIから対話を開始（デフォルト）
+    # user: 自分から対話を開始
+
 
 class UserSettingsUpdate(BaseModel):
     """ユーザー設定更新リクエスト"""
@@ -33,6 +38,7 @@ class UserSettingsUpdate(BaseModel):
     interaction_mode: Optional[InteractionMode] = None
     timeline_order: Optional[TimelineOrder] = None
     fab_position: Optional[FabPosition] = None
+    chat_initiator: Optional[ChatInitiator] = None
 
 
 class NameUpdateRequest(BaseModel):

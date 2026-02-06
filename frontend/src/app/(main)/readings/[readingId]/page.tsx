@@ -15,6 +15,8 @@ import {
   createInsight,
   updateInsight,
   deleteInsights,
+  getUserSettings,
+  updateUserSettings,
 } from "@/lib/api";
 import {
   Reading,
@@ -29,6 +31,7 @@ import {
   ReadingDeleteConfirmation,
   InsightCreateInput,
   InsightUpdateInput,
+  ChatInitiator,
 } from "@/lib/types";
 import { InsightCard } from "@/components/insights/InsightCard";
 import { InsightAddForm } from "@/components/insights/InsightAddForm";
@@ -79,7 +82,8 @@ export default function ReadingDetailPage() {
   const [deletingPlan, setDeletingPlan] = useState<ActionPlan | null>(null);
 
   // 対話開始者の選択（AIから/自分から）
-  const [chatInitiator, setChatInitiator] = useState<"ai" | "user">("ai");
+  const [chatInitiator, setChatInitiator] = useState<ChatInitiator>("ai");
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
 
   const fetchMoodData = useCallback(async () => {
     try {
@@ -134,6 +138,20 @@ export default function ReadingDetailPage() {
         } catch {
           setActionPlans([]);
         }
+
+        // ユーザー設定を読み込み（chat_initiator）
+        if (!settingsLoaded) {
+          try {
+            const settings = await getUserSettings();
+            if (settings.chat_initiator) {
+              setChatInitiator(settings.chat_initiator);
+            }
+            setSettingsLoaded(true);
+          } catch {
+            // 設定取得に失敗してもデフォルト値を使用
+            setSettingsLoaded(true);
+          }
+        }
       } catch {
         router.push("/home");
       } finally {
@@ -141,7 +159,7 @@ export default function ReadingDetailPage() {
       }
     }
     fetchData();
-  }, [readingId, router, fetchMoodData]);
+  }, [readingId, router, fetchMoodData, settingsLoaded]);
 
   const updateStatus = async (newStatus: ReadingStatus) => {
     if (!reading || reading.status === newStatus) return;
@@ -423,7 +441,10 @@ export default function ReadingDetailPage() {
               <div className="flex rounded-md overflow-hidden border border-gray-300">
                 <button
                   type="button"
-                  onClick={() => setChatInitiator("ai")}
+                  onClick={() => {
+                    setChatInitiator("ai");
+                    updateUserSettings({ chat_initiator: "ai" }).catch(() => {});
+                  }}
                   className={`px-3 py-1 text-xs font-medium transition-colors ${
                     chatInitiator === "ai"
                       ? "bg-gray-600 text-white"
@@ -434,7 +455,10 @@ export default function ReadingDetailPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setChatInitiator("user")}
+                  onClick={() => {
+                    setChatInitiator("user");
+                    updateUserSettings({ chat_initiator: "user" }).catch(() => {});
+                  }}
                   className={`px-3 py-1 text-xs font-medium transition-colors ${
                     chatInitiator === "user"
                       ? "bg-gray-600 text-white"

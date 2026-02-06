@@ -145,9 +145,11 @@ export default function VerifyEmailPage() {
           </button>
         </div>
 
-        <p className="mt-6 text-xs text-gray-500">
-          メールが届かない場合は、迷惑メールフォルダをご確認ください。
-        </p>
+        <div className="mt-6 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+          <p className="text-sm text-amber-800">
+            メールが届かない場合は、迷惑メールフォルダ（スパムフォルダ）もご確認ください。
+          </p>
+        </div>
       </div>
     </div>
   );
