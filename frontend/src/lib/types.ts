@@ -326,9 +326,45 @@ export interface TimelineResponse {
   has_more: boolean;
 }
 
+export interface TimelineReport {
+  id: string;
+  report_id: string;
+  user_id: string;
+  reading_id: string;
+  summary: string;
+  insights_summary: string;
+  context_analysis?: string;
+  display_name: string;
+  book: BookEmbed;
+  reading_status?: ReadingStatus;
+  published_at: string;
+  is_own: boolean;
+}
+
+export type TimelineItemType = "insight" | "report";
+
+export interface TimelineItem {
+  item_type: TimelineItemType;
+  insight?: TimelineInsight;
+  report?: TimelineReport;
+}
+
+export interface TimelineResponseV2 {
+  items: TimelineItem[];
+  next_cursor: string | null;
+  has_more: boolean;
+}
+
 export interface InsightVisibilityResponse {
   id: string;
   visibility: InsightVisibility;
+  published_at?: string;
+}
+
+export interface ReportVisibilityResponse {
+  id: string;
+  visibility: InsightVisibility;
+  include_context_analysis: boolean;
   published_at?: string;
 }
 
@@ -348,6 +384,9 @@ export interface Report {
   context_analysis: string;
   action_plan_ids: string[];
   metadata: ReportMetadata;
+  visibility?: InsightVisibility;
+  include_context_analysis?: boolean;
+  published_at?: string;
   created_at: string;
   updated_at: string;
 }

@@ -17,8 +17,11 @@ import type {
   MentorFeedbackType,
   InsightVisibility,
   InsightVisibilityResponse,
+  ReportVisibilityResponse,
   TimelineResponse,
+  TimelineResponseV2,
   TimelineOrder,
+  TimelineItemType,
   Book,
   BookSearchResponse,
   BookCreateInput,
@@ -451,6 +454,26 @@ export async function getTimeline(
   return apiClient<TimelineResponse>(`/api/timeline?${params.toString()}`);
 }
 
+/**
+ * タイムラインV2（公開Insight + Report一覧）を取得する
+ */
+export async function getTimelineV2(
+  order: TimelineOrder = "random",
+  itemType: TimelineItemType | "all" = "all",
+  limit: number = 20,
+  cursor?: string
+): Promise<TimelineResponseV2> {
+  const params = new URLSearchParams({
+    order,
+    item_type: itemType,
+    limit: String(limit),
+  });
+  if (cursor) {
+    params.append("cursor", cursor);
+  }
+  return apiClient<TimelineResponseV2>(`/api/timeline/v2?${params.toString()}`);
+}
+
 // --- Book API ---
 
 /**
@@ -584,6 +607,27 @@ export async function getReports(readingId: string): Promise<Report[]> {
  */
 export async function getLatestReport(readingId: string): Promise<Report | null> {
   return apiClient<Report | null>(`/api/readings/${readingId}/reports/latest`);
+}
+
+/**
+ * レポートの公開設定を更新する
+ */
+export async function updateReportVisibility(
+  readingId: string,
+  reportId: string,
+  visibility: InsightVisibility,
+  includeContextAnalysis: boolean
+): Promise<ReportVisibilityResponse> {
+  return apiClient<ReportVisibilityResponse>(
+    `/api/readings/${readingId}/reports/${reportId}/visibility`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({
+        visibility,
+        include_context_analysis: includeContextAnalysis,
+      }),
+    }
+  );
 }
 
 // --- Action Plan API ---

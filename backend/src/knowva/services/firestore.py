@@ -1237,6 +1237,206 @@ async def get_latest_report(user_id: str, reading_id: str) -> Optional[dict]:
     return reports[0] if reports else None
 
 
+async def get_report(user_id: str, reading_id: str, report_id: str) -> Optional[dict]:
+    """レポートを取得する。"""
+    db: AsyncClient = get_firestore_client()
+    doc = await (
+        db.collection("users")
+        .document(user_id)
+        .collection("readings")
+        .document(reading_id)
+        .collection("reports")
+        .document(report_id)
+        .get()
+    )
+    if doc.exists:
+        return {"id": doc.id, **doc.to_dict()}
+    return None
+
+
+async def update_report_visibility(
+    user_id: str,
+    reading_id: str,
+    report_id: str,
+    visibility: str,
+    include_context_analysis: bool,
+) -> Optional[dict]:
+    """レポートの公開設定を更新する。"""
+    db: AsyncClient = get_firestore_client()
+    doc_ref = (
+        db.collection("users")
+        .document(user_id)
+        .collection("readings")
+        .document(reading_id)
+        .collection("reports")
+        .document(report_id)
+    )
+    doc = await doc_ref.get()
+    if not doc.exists:
+        return None
+
+    await doc_ref.update({
+        "visibility": visibility,
+        "include_context_analysis": include_context_analysis,
+        "updated_at": _now(),
+    })
+    updated = await doc_ref.get()
+    return {"id": updated.id, **updated.to_dict()}
+
+
+# --- Public Reports (公開レポート) ---
+
+
+async def create_public_report(
+    user_id: str,
+    reading_id: str,
+    report_id: str,
+    report_data: dict,
+    book_data: dict,
+    visibility: str,
+    display_name: str,
+    include_context_analysis: bool,
+) -> dict:
+    """公開レポートを作成する。"""
+    db: AsyncClient = get_firestore_client()
+
+    # 既存の公開レポートがあるか確認
+    existing_docs = db.collection("publicReports").where(
+        filter=FieldFilter("report_id", "==", report_id)
+    )
+    existing = None
+    async for doc in existing_docs.stream():
+        existing = doc
+        break
+
+    now = _now()
+
+    if existing:
+        # 既存のドキュメントを更新
+        doc_ref = existing.reference
+        update_data = {
+            "visibility": visibility,
+            "display_name": display_name,
+            "summary": report_data.get("summary"),
+            "insights_summary": report_data.get("insights_summary"),
+            "context_analysis": report_data.get("context_analysis")
+            if include_context_analysis
+            else None,
+            "include_context_analysis": include_context_analysis,
+            "book": book_data,
+            "reading_status": report_data.get("reading_status"),
+        }
+        await doc_ref.update(update_data)
+        updated = await doc_ref.get()
+        return {"id": updated.id, **updated.to_dict()}
+    else:
+        # 新規作成
+        doc_ref = db.collection("publicReports").document()
+        doc_data = {
+            "report_id": report_id,
+            "user_id": user_id,
+            "reading_id": reading_id,
+            "summary": report_data.get("summary"),
+            "insights_summary": report_data.get("insights_summary"),
+            "context_analysis": report_data.get("context_analysis")
+            if include_context_analysis
+            else None,
+            "include_context_analysis": include_context_analysis,
+            "visibility": visibility,
+            "display_name": display_name,
+            "book": book_data,
+            "reading_status": report_data.get("reading_status"),
+            "created_at": report_data.get("created_at", now),
+            "published_at": now,
+        }
+        await doc_ref.set(doc_data)
+        return {"id": doc_ref.id, **doc_data}
+
+
+async def delete_public_report(report_id: str) -> bool:
+    """公開レポートを削除する。"""
+    db: AsyncClient = get_firestore_client()
+    docs = db.collection("publicReports").where(
+        filter=FieldFilter("report_id", "==", report_id)
+    )
+    deleted = False
+    async for doc in docs.stream():
+        await doc.reference.delete()
+        deleted = True
+    return deleted
+
+
+async def list_public_reports(
+    limit: int = 20, cursor: Optional[str] = None
+) -> tuple[list[dict], Optional[str], bool]:
+    """公開レポート一覧を取得する（新着順）。"""
+    db: AsyncClient = get_firestore_client()
+    query = db.collection("publicReports").order_by(
+        "published_at", direction="DESCENDING"
+    )
+
+    if cursor:
+        from datetime import datetime
+
+        cursor_time = datetime.fromisoformat(cursor)
+        query = query.start_after({"published_at": cursor_time})
+
+    query = query.limit(limit + 1)
+
+    results = []
+    async for doc in query.stream():
+        results.append({"id": doc.id, **doc.to_dict()})
+
+    has_more = len(results) > limit
+    if has_more:
+        results = results[:limit]
+
+    next_cursor = None
+    if results and has_more:
+        last_item = results[-1]
+        published_at = last_item.get("published_at")
+        if published_at:
+            if hasattr(published_at, "isoformat"):
+                next_cursor = published_at.isoformat()
+            else:
+                next_cursor = str(published_at)
+
+    return results, next_cursor, has_more
+
+
+async def list_public_reports_random(limit: int = 20) -> list[dict]:
+    """公開レポート一覧をランダムに取得する。"""
+    import random
+
+    db: AsyncClient = get_firestore_client()
+    docs = db.collection("publicReports")
+
+    results = []
+    async for doc in docs.stream():
+        results.append({"id": doc.id, **doc.to_dict()})
+
+    random.shuffle(results)
+    return results[:limit]
+
+
+async def update_public_reports_display_name(user_id: str, new_name: str) -> int:
+    """ユーザーの公開レポート（visibility: public）のdisplay_nameを一括更新する。"""
+    db: AsyncClient = get_firestore_client()
+
+    query = (
+        db.collection("publicReports")
+        .where(filter=FieldFilter("user_id", "==", user_id))
+        .where(filter=FieldFilter("visibility", "==", "public"))
+    )
+
+    updated_count = 0
+    async for doc in query.stream():
+        await doc.reference.update({"display_name": new_name})
+        updated_count += 1
+
+    return updated_count
+
+
 # --- Action Plans (アクションプラン) ---
 
 

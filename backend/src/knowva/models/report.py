@@ -1,8 +1,12 @@
 """読書レポートのデータモデル。"""
 
 from datetime import datetime
+from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
+
+# レポートの公開設定
+ReportVisibility = Literal["private", "public", "anonymous"]
 
 
 class ReportMetadata(BaseModel):
@@ -39,5 +43,55 @@ class ReportResponse(BaseModel):
         default_factory=list, description="関連するアクションプランのID"
     )
     metadata: ReportMetadata
+    visibility: ReportVisibility = Field(default="private", description="公開設定")
+    include_context_analysis: bool = Field(
+        default=False, description="公開時に「あなたへの関連付け」を含めるか"
+    )
+    published_at: Optional[datetime] = Field(default=None, description="公開日時")
     created_at: datetime
     updated_at: datetime
+
+
+class ReportVisibilityUpdate(BaseModel):
+    """レポート公開設定の更新リクエスト。"""
+
+    visibility: ReportVisibility
+    include_context_analysis: bool = Field(
+        default=False, description="公開時に「あなたへの関連付け」を含めるか"
+    )
+
+
+class ReportVisibilityResponse(BaseModel):
+    """レポート公開設定の更新レスポンス。"""
+
+    id: str
+    visibility: ReportVisibility
+    include_context_analysis: bool
+    published_at: Optional[datetime] = None
+
+
+class BookEmbed(BaseModel):
+    """本の埋め込み情報。"""
+
+    title: str
+    author: str
+    cover_url: Optional[str] = None
+
+
+class PublicReportResponse(BaseModel):
+    """公開レポート（タイムライン用）。"""
+
+    id: str
+    report_id: str
+    user_id: str
+    reading_id: str
+    summary: str
+    insights_summary: str
+    context_analysis: Optional[str] = Field(
+        default=None, description="include_context_analysisがFalseの場合はNone"
+    )
+    display_name: str
+    book: BookEmbed
+    reading_status: Optional[str] = None
+    published_at: datetime
+    is_own: bool = False
