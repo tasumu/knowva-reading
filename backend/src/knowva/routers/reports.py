@@ -21,7 +21,11 @@ from knowva.models.action_plan import (
     ActionPlanResponse,
     ActionPlanUpdateFull,
 )
-from knowva.models.report import ReportResponse
+from knowva.models.report import (
+    ReportResponse,
+    ReportVisibilityResponse,
+    ReportVisibilityUpdate,
+)
 from knowva.services import firestore
 from knowva.services.session_service import get_session_service
 
@@ -219,6 +223,86 @@ async def get_latest_report(
     if not report:
         return None
     return report
+
+
+ANONYMOUS_DISPLAY_NAME = "読書家さん"
+
+
+@router.patch(
+    "/{reading_id}/reports/{report_id}/visibility",
+    response_model=ReportVisibilityResponse,
+)
+async def update_report_visibility(
+    reading_id: str,
+    report_id: str,
+    body: ReportVisibilityUpdate,
+    user: dict = Depends(get_current_user),
+):
+    """レポートの公開設定を更新する。"""
+    user_id = user["uid"]
+
+    # レポート取得
+    report = await firestore.get_report(user_id, reading_id, report_id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+
+    # visibility更新
+    updated = await firestore.update_report_visibility(
+        user_id, reading_id, report_id, body.visibility, body.include_context_analysis
+    )
+
+    published_at = None
+
+    if body.visibility in ("public", "anonymous"):
+        # 読書記録取得
+        reading = await firestore.get_reading(user_id, reading_id)
+        if not reading:
+            raise HTTPException(status_code=404, detail="Reading not found")
+
+        # 表示名決定
+        if body.visibility == "public":
+            nickname = await firestore.get_user_name(user_id)
+            display_name = nickname if nickname else ANONYMOUS_DISPLAY_NAME
+        else:
+            display_name = ANONYMOUS_DISPLAY_NAME
+
+        # book情報を取得
+        book_data = reading.get("book", {})
+        if not book_data and reading.get("book_id"):
+            book = await firestore.get_book(reading["book_id"])
+            if book:
+                book_data = {
+                    "title": book.get("title", ""),
+                    "author": book.get("author", ""),
+                    "cover_url": book.get("cover_url"),
+                }
+
+        # 公開レポート作成/更新
+        report_data_for_public = {
+            **updated,
+            "reading_status": reading.get("status"),
+        }
+        public_report = await firestore.create_public_report(
+            user_id=user_id,
+            reading_id=reading_id,
+            report_id=report_id,
+            report_data=report_data_for_public,
+            book_data=book_data,
+            visibility=body.visibility,
+            display_name=display_name,
+            include_context_analysis=body.include_context_analysis,
+        )
+        published_at = public_report.get("published_at")
+    else:
+        # 非公開に変更時は公開レポートを削除
+        await firestore.delete_public_report(report_id)
+
+    return ReportVisibilityResponse(
+        id=report_id,
+        visibility=body.visibility,
+        include_context_analysis=body.include_context_analysis,
+        published_at=published_at,
+    )
 
 
 # --- Action Plan Endpoints ---

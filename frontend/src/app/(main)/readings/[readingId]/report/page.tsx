@@ -11,6 +11,7 @@ import {
   createActionPlan,
   updateActionPlan,
   deleteActionPlan,
+  updateReportVisibility,
 } from "@/lib/api";
 import type {
   Reading,
@@ -20,6 +21,7 @@ import type {
   ActionPlanUpdateInput,
   MoodComparison,
   MoodData,
+  InsightVisibility,
 } from "@/lib/types";
 import { ReportView } from "@/components/report/ReportView";
 import { ActionPlanList } from "@/components/action-plan/ActionPlanList";
@@ -169,6 +171,35 @@ export default function ReportPage() {
     }
   };
 
+  // レポート公開設定変更
+  const handleReportVisibilityChange = async (
+    visibility: InsightVisibility,
+    includeContextAnalysis: boolean
+  ) => {
+    if (!report) return;
+    try {
+      const result = await updateReportVisibility(
+        readingId,
+        report.id,
+        visibility,
+        includeContextAnalysis
+      );
+      setReport((prev) =>
+        prev
+          ? {
+              ...prev,
+              visibility: result.visibility,
+              include_context_analysis: result.include_context_analysis,
+              published_at: result.published_at,
+            }
+          : null
+      );
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "公開設定の更新に失敗しました");
+      throw err; // ReportVisibilitySelectorのローディング状態を正しく更新するため
+    }
+  };
+
   if (loading || !reading) {
     return <div className="text-center py-8 text-gray-500">読み込み中...</div>;
   }
@@ -228,7 +259,11 @@ export default function ReportPage() {
       {/* レポート表示 */}
       {!generating && report && (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-          <ReportView report={report} />
+          <ReportView
+            report={report}
+            showVisibilityControl={true}
+            onVisibilityChange={handleReportVisibilityChange}
+          />
         </div>
       )}
 

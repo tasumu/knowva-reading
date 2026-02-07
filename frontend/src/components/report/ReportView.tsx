@@ -1,12 +1,22 @@
 "use client";
 
-import type { Report } from "@/lib/types";
+import type { Report, InsightVisibility } from "@/lib/types";
+import ReportVisibilitySelector from "./ReportVisibilitySelector";
 
 interface Props {
   report: Report;
+  showVisibilityControl?: boolean;
+  onVisibilityChange?: (
+    visibility: InsightVisibility,
+    includeContextAnalysis: boolean
+  ) => Promise<void>;
 }
 
-export function ReportView({ report }: Props) {
+export function ReportView({
+  report,
+  showVisibilityControl = false,
+  onVisibilityChange,
+}: Props) {
   return (
     <div className="space-y-6">
       {/* メタ情報 */}
@@ -47,6 +57,17 @@ export function ReportView({ report }: Props) {
           </p>
         </div>
       </div>
+
+      {/* 公開設定（あなたへの関連付けの下に配置） */}
+      {showVisibilityControl && onVisibilityChange && (
+        <div className="border-t border-gray-200 pt-4">
+          <ReportVisibilitySelector
+            currentVisibility={report.visibility ?? "private"}
+            includeContextAnalysis={report.include_context_analysis ?? false}
+            onVisibilityChange={onVisibilityChange}
+          />
+        </div>
+      )}
     </div>
   );
 }

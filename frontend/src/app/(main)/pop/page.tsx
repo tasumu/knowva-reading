@@ -2,17 +2,28 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { getTimeline, getUserSettings } from "@/lib/api";
-import type { TimelineInsight, TimelineOrder } from "@/lib/types";
-import TimelineCard from "@/components/pop/TimelineCard";
+import { getTimelineV2, getUserSettings } from "@/lib/api";
+import type { TimelineItem, TimelineOrder, TimelineItemType } from "@/lib/types";
+import TimelineItemComponent from "@/components/pop/TimelineItemComponent";
 
 export default function PopPage() {
-  const [insights, setInsights] = useState<TimelineInsight[]>([]);
+  const [items, setItems] = useState<TimelineItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [order, setOrder] = useState<TimelineOrder>("random");
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
+  // フィルタ: 気づき（Insight）とレポートの表示切り替え
+  const [showInsights, setShowInsights] = useState(true);
+  const [showReports, setShowReports] = useState(true);
+
+  // フィルタ状態からitem_typeを計算
+  const getItemType = useCallback((): TimelineItemType | "all" => {
+    if (showInsights && showReports) return "all";
+    if (showInsights) return "insight";
+    if (showReports) return "report";
+    return "all"; // 両方OFFの場合もallを返す（空結果を防ぐ）
+  }, [showInsights, showReports]);
 
   const fetchTimeline = useCallback(
     async (isLoadMore = false) => {
@@ -24,12 +35,13 @@ export default function PopPage() {
 
       try {
         const cursor = isLoadMore ? nextCursor || undefined : undefined;
-        const response = await getTimeline(order, 20, cursor);
+        const itemType = getItemType();
+        const response = await getTimelineV2(order, itemType, 20, cursor);
 
         if (isLoadMore) {
-          setInsights((prev) => [...prev, ...response.insights]);
+          setItems((prev) => [...prev, ...response.items]);
         } else {
-          setInsights(response.insights);
+          setItems(response.items);
         }
         setNextCursor(response.next_cursor);
         setHasMore(response.has_more);
@@ -40,7 +52,7 @@ export default function PopPage() {
         setLoadingMore(false);
       }
     },
-    [order, nextCursor]
+    [order, nextCursor, getItemType]
   );
 
   // 初期読み込み: ユーザー設定から表示順を取得
@@ -56,10 +68,10 @@ export default function PopPage() {
     init();
   }, []);
 
-  // 表示順が変わったらタイムラインを再取得
+  // 表示順またはフィルタが変わったらタイムラインを再取得
   useEffect(() => {
     fetchTimeline(false);
-  }, [order]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [order, showInsights, showReports]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleRefresh = () => {
     fetchTimeline(false);
@@ -117,30 +129,60 @@ export default function PopPage() {
       </div>
 
       {/* 表示順切り替え */}
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-gray-500">表示順:</span>
-        <div className="flex rounded-lg border border-gray-200 overflow-hidden">
-          <button
-            onClick={() => handleOrderChange("random")}
-            className={`px-3 py-1.5 text-sm transition-colors ${
-              order === "random"
-                ? "bg-blue-600 text-white"
-                : "bg-white text-gray-600 hover:bg-gray-50"
-            }`}
-          >
-            ランダム
-          </button>
-          <button
-            onClick={() => handleOrderChange("newest")}
-            className={`px-3 py-1.5 text-sm transition-colors ${
-              order === "newest"
-                ? "bg-blue-600 text-white"
-                : "bg-white text-gray-600 hover:bg-gray-50"
-            }`}
-          >
-            新着順
-          </button>
+      <div className="flex flex-wrap items-center gap-4">
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-500">表示順:</span>
+          <div className="flex rounded-lg border border-gray-200 overflow-hidden">
+            <button
+              onClick={() => handleOrderChange("random")}
+              className={`px-3 py-1.5 text-sm transition-colors ${
+                order === "random"
+                  ? "bg-blue-600 text-white"
+                  : "bg-white text-gray-600 hover:bg-gray-50"
+              }`}
+            >
+              ランダム
+            </button>
+            <button
+              onClick={() => handleOrderChange("newest")}
+              className={`px-3 py-1.5 text-sm transition-colors ${
+                order === "newest"
+                  ? "bg-blue-600 text-white"
+                  : "bg-white text-gray-600 hover:bg-gray-50"
+              }`}
+            >
+              新着順
+            </button>
+          </div>
         </div>
+
+        {/* フィルタ切り替え */}
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-500">表示:</span>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowInsights(!showInsights)}
+              className={`px-3 py-1.5 text-sm rounded-lg border transition-colors ${
+                showInsights
+                  ? "bg-purple-100 text-purple-700 border-purple-200"
+                  : "bg-white text-gray-400 border-gray-200 hover:bg-gray-50"
+              }`}
+            >
+              気づき
+            </button>
+            <button
+              onClick={() => setShowReports(!showReports)}
+              className={`px-3 py-1.5 text-sm rounded-lg border transition-colors ${
+                showReports
+                  ? "bg-indigo-100 text-indigo-700 border-indigo-200"
+                  : "bg-white text-gray-400 border-gray-200 hover:bg-gray-50"
+              }`}
+            >
+              レポート
+            </button>
+          </div>
+        </div>
+
         <Link
           href="/settings"
           className="ml-auto text-xs text-gray-400 hover:text-gray-600"
@@ -155,14 +197,14 @@ export default function PopPage() {
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-gray-200 border-t-blue-600" />
           <p className="mt-2 text-sm text-gray-500">読み込み中...</p>
         </div>
-      ) : insights.length === 0 ? (
+      ) : items.length === 0 ? (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
           <div className="text-4xl mb-4">📚</div>
           <h3 className="text-lg font-medium text-gray-900 mb-2">
-            まだ公開された気づきがありません
+            まだ公開されたコンテンツがありません
           </h3>
           <p className="text-sm text-gray-500 mb-4">
-            読書から得た気づきを公開して、最初の投稿者になりましょう
+            読書から得た気づきやレポートを公開して、最初の投稿者になりましょう
           </p>
           <Link
             href="/home"
@@ -187,8 +229,11 @@ export default function PopPage() {
       ) : (
         <>
           <div className="space-y-4">
-            {insights.map((insight) => (
-              <TimelineCard key={insight.id} insight={insight} />
+            {items.map((item) => (
+              <TimelineItemComponent
+                key={item.insight?.id || item.report?.id}
+                item={item}
+              />
             ))}
           </div>
 
@@ -205,7 +250,7 @@ export default function PopPage() {
             </div>
           )}
 
-          {/* ランダムの場合は「別の気づきを見る」ボタン */}
+          {/* ランダムの場合は「別のコンテンツを見る」ボタン */}
           {order === "random" && (
             <div className="text-center pt-4">
               <button
@@ -213,7 +258,7 @@ export default function PopPage() {
                 disabled={loading}
                 className="px-6 py-2 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50"
               >
-                別の気づきを見る
+                別のコンテンツを見る
               </button>
             </div>
           )}
