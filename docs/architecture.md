@@ -118,6 +118,17 @@ Knowvaは、将来的なAIモデルの進化やマルチモーダルなアート
 │   │       metrics: { energy, positivity, clarity, motivation, openness },
 │   │       dominant_emotion, note?, created_at
 │   │
+│   ├── /reports/{reportId}              // 読書レポート
+│   │       summary, insights_summary, context_analysis,
+│   │       visibility: "private" | "public" | "anonymous",
+│   │       action_plan_ids[], metadata: { session_count, insight_count, generation_model },
+│   │       created_at, updated_at
+│   │
+│   ├── /actionPlans/{planId}            // アクションプラン
+│   │       action, relevance, difficulty: "easy" | "medium" | "hard",
+│   │       timeframe, source_insight_id?, status: "pending" | "in_progress" | "completed" | "skipped",
+│   │       completed_at?, created_at, updated_at
+│   │
 │   └── /sessions/{sessionId}            // 対話セッション
 │       │   session_type: "before_reading" | "during_reading" | "after_reading",
 │       │   started_at, ended_at?, initialized?
@@ -136,6 +147,10 @@ Knowvaは、将来的なAIモデルの進化やマルチモーダルなアート
 /publicInsights/{publicInsightId}        // 公開Insightコレクション
     insight_id, user_id, content, type, display_name,
     book: { title, author }, reading_status, published_at
+
+/publicReports/{publicReportId}          // 公開レポートコレクション
+    report_id, user_id, summary, insights_summary, display_name,
+    book: { title, author }, published_at
 ```
 
 ### 設計のポイント
@@ -147,15 +162,18 @@ Knowvaは、将来的なAIモデルの進化やマルチモーダルなアート
 | ユーザー設定 | `users`ドキュメントに`settings`を埋め込み |
 | プロファイル | `/profileEntries`サブコレクションで管理 |
 | 気づき・学び | `readings`のサブコレクション（複数追記可能） |
-| 公開Insight | 別コレクション `/publicInsights` で全ユーザー公開 |
+| 公開コンテンツ | `/publicInsights` `/publicReports` で全ユーザー公開 |
+| レポート・アクションプラン | `readings`のサブコレクション |
 | 対話履歴 | `sessions/messages`の2階層で管理 |
 
-### 公開Insightの仕組み
+### 公開コンテンツの仕組み
 
 Insightの`visibility`を変更すると：
 - `public`: `/publicInsights`にコピー作成、`display_name`にニックネーム設定
 - `anonymous`: `/publicInsights`にコピー作成、`display_name`を「読書家さん」に設定
 - `private`: `/publicInsights`から削除
+
+レポートも同様に`visibility`変更で`/publicReports`にコピー作成/削除される。
 
 ---
 
@@ -163,14 +181,17 @@ Insightの`visibility`を変更すると：
 
 ## AIエージェント設計
 
+> 各エージェントの詳細仕様（プロンプト設計、対話フロー等）は [agents.md](agents.md) を参照。
+
 ### エージェント概要
 
 | エージェント | 役割 | 起動タイミング | 状態 |
 |------------|------|--------------|------|
 | Reading Agent | ユーザーとの対話を通じて読書体験を深掘りし、感想・学びの言語化を支援 | ユーザーが対話を開始した時 | 実装済み |
-| BookGuide SubAgent | 専門的な質問（概念解説、時代背景等）に回答 | Reading Agentが委譲 | 実装済み |
+| BookGuide Agent (AgentTool) | 専門的な質問（概念解説、時代背景等）に回答。結果はReading Agentに戻る | Reading AgentがAgentToolとして呼び出し | 実装済み |
 | Onboarding Agent | 初回プロファイル作成 | 新規ユーザー時 | 実装済み |
 | Mentor Agent | 週次・月次で読書活動を振り返り、励ましとアドバイスを提供 | ユーザーからのリクエスト時 | 実装済み |
+| Report Agent | 対話履歴・Insightから構造化された読書レポートを生成、アクションプランを提案 | 手動リクエスト時 | 実装済み |
 | Recommendation Agent | ユーザープロファイルに基づき次に読むべき本を提案 | ユーザーからのリクエスト時 | Phase 2 |
 | Profile Extraction Agent | 対話ログからプロファイルを自動抽出 | セッション終了時 | Phase 2 |
 
@@ -184,12 +205,16 @@ Insightの`visibility`を変更すると：
 | reading_agent | `save_profile_entry` | 対話中に得られたプロファイル情報を保存 |
 | reading_agent | `update_reading_status` | 読書ステータスを更新 |
 | reading_agent | `present_options` | ユーザーに選択肢を提示（guidedモード専用） |
+| reading_agent | `book_guide_agent` (AgentTool) | 専門的な質問をBookGuide Agentに委ね、結果を受け取る |
 | book_guide_agent | `google_search` | 関連情報をWeb検索して回答を補強 |
 | book_guide_agent | `get_book_info` | 本の詳細情報を取得 |
 | onboarding_agent | `save_profile_entry` | プロファイル情報をFirestoreに保存 |
 | onboarding_agent | `get_current_entries` | 既存のプロファイル情報を取得 |
 | mentor_agent | `get_mentor_context` | 指定期間の読書履歴・Insight・プロファイルを取得 |
 | mentor_agent | `save_mentor_feedback` | 振り返りコメントをFirestoreに保存 |
+| report_agent | `get_report_context` | セッション全メッセージ・Insight・プロファイルを集約取得 |
+| report_agent | `save_report` | 生成したレポートをFirestoreに保存 |
+| report_agent | `save_action_plan` | アクションプランをFirestoreに保存 |
 | recommendation_agent | `get_user_profile` | ユーザーの現在のプロファイルを取得（Phase 2） |
 | recommendation_agent | `search_books` | 書籍を検索（Phase 2） |
 | recommendation_agent | `save_recommendation` | 推薦結果をFirestoreに保存（Phase 2） |
@@ -224,8 +249,19 @@ Insightの`visibility`を変更すると：
 | POST | `/api/readings` | 新規読書記録作成 | 実装済み |
 | GET | `/api/readings/{readingId}` | 読書詳細取得 | 実装済み |
 | PATCH | `/api/readings/{readingId}` | 読書ステータス更新 | 実装済み |
+| DELETE | `/api/readings/{readingId}` | 読書記録の削除（カスケード） | 実装済み |
+| GET | `/api/readings/{readingId}/count` | 関連データ件数取得 | 実装済み |
+
+#### Insight管理
+
+| Method | Path | 概要 | 状態 |
+|--------|------|------|------|
 | GET | `/api/readings/{readingId}/insights` | Insight一覧取得 | 実装済み |
+| POST | `/api/readings/{readingId}/insights` | Insight手動作成 | 実装済み |
+| PATCH | `/api/readings/{readingId}/insights/{insightId}` | Insight更新 | 実装済み |
+| DELETE | `/api/readings/{readingId}/insights/{insightId}` | Insight削除 | 実装済み |
 | PATCH | `/api/readings/{readingId}/insights/{insightId}/visibility` | Insight公開設定変更 | 実装済み |
+| POST | `/api/readings/{readingId}/insights/merge` | Insightマージ | 実装済み |
 
 #### 書籍管理
 
@@ -279,11 +315,42 @@ Insightの`visibility`を変更すると：
 | GET | `/api/mentor/feedbacks/latest` | 最新フィードバック取得 | 実装済み |
 | POST | `/api/mentor/reset` | メンターセッションリセット | 実装済み |
 
+#### レポート
+
+| Method | Path | 概要 | 状態 |
+|--------|------|------|------|
+| POST | `/api/readings/{readingId}/reports/generate` | レポート生成（SSEストリーミング） | 実装済み |
+| GET | `/api/readings/{readingId}/reports` | レポート一覧取得 | 実装済み |
+| GET | `/api/readings/{readingId}/reports/{reportId}` | レポート詳細取得 | 実装済み |
+| PATCH | `/api/readings/{readingId}/reports/{reportId}/visibility` | レポート公開設定変更 | 実装済み |
+
+#### アクションプラン
+
+| Method | Path | 概要 | 状態 |
+|--------|------|------|------|
+| POST | `/api/readings/{readingId}/actionPlans` | アクションプラン作成 | 実装済み |
+| GET | `/api/readings/{readingId}/actionPlans` | アクションプラン一覧取得 | 実装済み |
+| PATCH | `/api/readings/{readingId}/actionPlans/{planId}` | アクションプラン更新（ステータス等） | 実装済み |
+| DELETE | `/api/readings/{readingId}/actionPlans/{planId}` | アクションプラン削除 | 実装済み |
+
+#### オンボーディング
+
+| Method | Path | 概要 | 状態 |
+|--------|------|------|------|
+| GET | `/api/onboarding/status` | オンボーディング完了状態確認 | 実装済み |
+| POST | `/api/onboarding/submit` | オンボーディング回答送信 | 実装済み |
+
 #### タイムライン（POP）
 
 | Method | Path | 概要 | 状態 |
 |--------|------|------|------|
-| GET | `/api/timeline` | 公開Insightタイムライン取得 | 実装済み |
+| GET | `/api/timeline` | 公開Insight・レポートのタイムライン取得 | 実装済み |
+
+#### バッジ
+
+| Method | Path | 概要 | 状態 |
+|--------|------|------|------|
+| GET | `/api/badges` | バッジ一覧取得 | 実装済み |
 
 #### 推薦
 
@@ -379,6 +446,8 @@ User → POST /api/.../sessions/{id}/init → FastAPI
 
 ## 技術スタック
 
+> バージョン詳細は [tech-stack.md](tech-stack.md) を参照。
+
 ### 1) 実行基盤（ADK + Cloud Run）
 - **Agent Framework:** Agent Development Kit (ADK) + google-genai SDK
 - **LLM:** Gemini（現在 `gemini-3-flash-preview`）、本番はVertex AI経由
@@ -399,14 +468,18 @@ User → POST /api/.../sessions/{id}/init → FastAPI
 #### ルーティング構成
 
 ```
-/login, /register          -- 認証ページ
-/home                      -- ダッシュボード（振り返り、最近の読書、気づき、プロファイル）
-/readings                  -- 読書一覧
-/readings/[readingId]      -- 読書詳細（insights、mood、セッション履歴）
-/readings/[readingId]/chat -- 対話UI（メインインタラクション）
-/mentor                    -- 振り返りエージェント（対話 + 履歴タブ）
-/pop                       -- 公開Insightタイムライン（POP）
-/settings                  -- ユーザー設定（対話モード、タイムライン表示順、ニックネーム）
+/login, /register              -- 認証ページ
+/verify-email                  -- メール認証
+/onboarding                    -- 初回プロファイル設定（6ステップ）
+/home                          -- ダッシュボード（最近の読書、気づき、アクションプラン）
+/readings                      -- 読書一覧
+/readings/[readingId]          -- 読書詳細（insights、mood、アクションプラン）
+/readings/[readingId]/chat     -- 対話UI（メインインタラクション）
+/readings/[readingId]/report   -- 読書レポート表示
+/mentor                        -- 振り返りエージェント（対話 + 履歴タブ）
+/pop                           -- 公開Insight・レポートタイムライン（POP）
+/quick-voice                   -- ワンタップ音声入力
+/settings                      -- ユーザー設定（対話モード、タイムライン表示順、ニックネーム、FAB位置）
 ```
 
 #### 主要コンポーネント
@@ -422,15 +495,20 @@ User → POST /api/.../sessions/{id}/init → FastAPI
 | `MoodForm` | 心境記録フォーム（5メトリクス） |
 | `MoodChart` | 心境可視化（レーダー/バーチャート） |
 | `TimelineCard` | 公開Insight表示カード |
+| `TimelineReportCard` | 公開レポート表示カード |
 | `MentorChatInterface` | メンターエージェントとの対話UI |
 | `MentorFeedbackList` | フィードバック履歴表示 |
 | `BookSearchInput` | Google Books API検索 |
+| `ReportView` | 読書レポート表示 |
+| `ActionPlanList` | アクションプラン一覧・管理 |
+| `QuickVoiceFAB` | ワンタップ音声入力FAB |
+| `BadgeList` | バッジ一覧 |
 
 #### 状態管理・データ取得
 - Server Components をベースとし、インタラクティブ部分のみ Client Components
 - データ取得: fetch API + useEffect
 - 対話UI: Server-Sent Events (SSE) でストリーミングレスポンス受信
-- カスタムHooks: `useStreamingChat`, `useSpeechRecognition`, `useMentorChat`
+- カスタムHooks: `useStreamingChat`, `useSpeechRecognition`, `useMentorChat`, `useBookSearch`, `useAccountLink`
 
 ### バックエンド
 - **Python 3.12+ (FastAPI)** + uv
@@ -446,7 +524,7 @@ User → POST /api/.../sessions/{id}/init → FastAPI
   - `/backend/Dockerfile` を使用
   - GitHub pushトリガーで自動デプロイ
 - **データベース:** Firestore（本番）
-- **認証:** Firebase Auth（メール/パスワード）
+- **認証:** Firebase Auth（メール/パスワード、Google、匿名）
 - **Firebase Project ID:** `knowva-reading`
 
 #### Phase 2以降

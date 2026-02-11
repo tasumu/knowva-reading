@@ -2,7 +2,7 @@
 
 ## エージェントアーキテクチャ概要
 
-Knowvaは ADK (Agent Development Kit) を使用した4つのエージェントで構成されています。
+Knowvaは ADK (Agent Development Kit) を使用した5つのエージェント + 1 AgentToolで構成されています。
 各エージェントはGUI上で別々の画面として提供され、それぞれが独立して動作します。
 
 **設計原則:**
@@ -14,42 +14,45 @@ Knowvaは ADK (Agent Development Kit) を使用した4つのエージェント�
 ## エージェント関係図
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                         Knowva エージェント構成                              │
-│                      (各エージェントはGUI上で独立)                           │
-└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────────────────┐
+│                              Knowva エージェント構成                                      │
+│                           (各エージェントはGUI上で独立)                                   │
+└─────────────────────────────────────────────────────────────────────────────────────────┘
 
-┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
-│ Reading Agent   │  │ Onboarding      │  │ Mentor Agent    │  │ Recommendation  │
-│                 │  │ Agent           │  │                 │  │ Agent           │
-│ 読書対話全体を   │  │                 │  │ 振り返り・      │  │ (Phase 2)       │
-│ 担当            │  │ 初回の          │  │ 励ましを担当    │  │                 │
-│ (前/中/後を     │  │ プロファイル     │  │                 │  │ 本の推薦        │
-│  状態で管理)    │  │ 作成を担当      │  │ 週次/月次の     │  │ を担当          │
-│                 │  │                 │  │ 読書活動を振返  │  │                 │
-│ 📖 読書画面     │  │ 👋 初回/設定    │  │ 💬 振り返り画面 │  │ 📚 推薦画面     │
-└────────┬────────┘  └────────┬────────┘  └────────┬────────┘  └────────┬────────┘
-         │                    │                    │                    │
-         ▼                    ▼                    ▼                    ▼
-┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
-│ Tools:          │  │ Tools:          │  │ Tools:          │  │ Tools:          │
-│ - get_reading   │  │ - save_profile  │  │ - get_mentor    │  │ - get_user      │
-│   _context      │  │   _entry        │  │   _context      │  │   _profile      │
-│ - save_insight  │  │ - get_current   │  │ - save_mentor   │  │ - search_books  │
-│ - save_mood     │  │   _entries      │  │   _feedback     │  │ - save_         │
-│ - save_profile  │  └─────────────────┘  └─────────────────┘  │   recommendation│
-│   _entry        │                                            └─────────────────┘
+┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
+│ Reading Agent   │  │ Onboarding      │  │ Mentor Agent    │  │ Report Agent    │  │ Recommendation  │
+│                 │  │ Agent           │  │                 │  │                 │  │ Agent           │
+│ 読書対話全体を   │  │                 │  │ 振り返り・      │  │ 読書レポート     │  │ (Phase 2)       │
+│ 担当            │  │ 初回の          │  │ 励ましを担当    │  │ 生成・           │  │                 │
+│ (前/中/後を     │  │ プロファイル     │  │                 │  │ アクションプラン │  │ 本の推薦        │
+│  状態で管理)    │  │ 作成を担当      │  │ 週次/月次の     │  │ 提案を担当      │  │ を担当          │
+│                 │  │                 │  │ 読書活動を振返  │  │                 │  │                 │
+│ 📖 読書画面     │  │ 👋 初回/設定    │  │ 💬 振り返り画面 │  │ 📝 レポート画面 │  │ 📚 推薦画面     │
+└────────┬────────┘  └────────┬────────┘  └────────┬────────┘  └────────┬────────┘  └────────┬────────┘
+         │                    │                    │                    │                    │
+         ▼                    ▼                    ▼                    ▼                    ▼
+┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
+│ Tools:          │  │ Tools:          │  │ Tools:          │  │ Tools:          │  │ Tools:          │
+│ - get_reading   │  │ - save_profile  │  │ - get_mentor    │  │ - get_report    │  │ - get_user      │
+│   _context      │  │   _entry        │  │   _context      │  │   _context      │  │   _profile      │
+│ - save_insight  │  │ - get_current   │  │ - save_mentor   │  │ - save_report   │  │ - search_books  │
+│ - save_mood     │  │   _entries      │  │   _feedback     │  │ - save_action   │  │ - save_         │
+│ - save_profile  │  └─────────────────┘  └─────────────────┘  │   _plan         │  │   recommendation│
+│   _entry        │                                            └─────────────────┘  └─────────────────┘
 │ - update_reading│
 │   _status       │
 │ - present       │
 │   _options      │
+│ - book_guide    │
+│   _agent        │
+│   (AgentTool)   │
 └────────┬────────┘
          │
-         │ 専門的な質問の場合、委譲
+         │ 専門的な質問の場合、AgentToolとして呼び出し（結果が戻る）
          ▼
 ┌─────────────────┐
-│ BookGuide       │
-│ SubAgent        │
+│ BookGuide Agent │
+│ (AgentTool)     │
 │                 │
 │ 専門的な質問への │
 │ 回答・解説      │
@@ -67,7 +70,7 @@ Knowvaは ADK (Agent Development Kit) を使用した4つのエージェント�
 **役割:**
 - 読書前・読書中・読書後の対話を1つのエージェントで担当
 - 読書フェーズを状態として管理し、プロンプトで対応を切り替え
-- 専門的な質問はBookGuide SubAgentに委譲
+- 専門的な質問はBookGuide Agent（AgentTool）を呼び出し
 - 対話中に現れるユーザーの目標・興味も収集しプロファイルに保存
 
 **実装ファイル:** `backend/src/knowva/agents/reading/agent.py`
@@ -126,11 +129,11 @@ present_options(
 
 セッション開始時、`/sessions/{sessionId}/init`エンドポイントが呼ばれ、`__session_init__`トリガーがエージェントに送信されます。エージェントは読書記録のコンテキスト（書籍情報、読書ステータス、対話モード）を取得し、状況に応じた初期挨拶を生成します。
 
-**サブエージェント:**
+**AgentTool:**
 
-#### BookGuide SubAgent
+#### BookGuide Agent (AgentTool)
 
-Reading Agentは専門的な質問（本の内容・背景・解説）を検知すると、BookGuide SubAgentに処理を委譲します。
+Reading Agentは専門的な質問（本の内容・背景・解説）を検知すると、BookGuide AgentをAgentToolとして呼び出します。制御移譲ではなく、ツール呼び出しとして結果がReading Agentに戻ります。
 
 **役割:** 本の内容や背景について専門的な質問に答え、理解をサポートする
 
@@ -155,7 +158,7 @@ Reading Agentは専門的な質問（本の内容・背景・解説）を検知�
 | `google_search` | 関連情報をWeb検索して回答を補強 |
 | `get_book_info` | 本の詳細情報（著者、出版年、ジャンルなど）を取得 |
 
-**呼び出しタイミング:** どのフェーズからでも、専門的な質問があれば委譲
+**呼び出しタイミング:** どのフェーズからでも、専門的な質問があればAgentToolとして呼び出し
 
 ### 2. Onboarding Agent
 
@@ -224,7 +227,40 @@ Response: 振り返りコメント + 次へのアドバイス
 - 無理のない現実的なアドバイス
 - 読書が少ない期間でも否定せず、小さな一歩を称える
 
-### 4. Recommendation Agent (Phase 2)
+### 4. Report Agent
+
+**役割:** 対話履歴・Insightを統合して構造化された読書レポートを生成し、アクションプランを提案
+
+**実装ファイル:** `backend/src/knowva/agents/report/agent.py`
+
+**使用タイミング:**
+- 読了時（status=completed）にユーザーがレポート生成をリクエスト
+- `/readings/[readingId]/report` 画面
+
+**レポート構成:**
+1. **summary**: 読書体験の1-2行要約
+2. **insights_summary**: 個別Insightの統合・構造化
+3. **context_analysis**: ユーザーの目標・状況との関連分析
+
+**ツール:**
+| ツール名 | 機能 |
+|---------|------|
+| `get_report_context` | セッション全メッセージ + Insight一覧 + プロファイルを集約取得 |
+| `save_report` | 生成したレポートをFirestoreに保存 |
+| `save_action_plan` | 読書から得た学びを具体的なアクションに変換して保存 |
+
+**アクションプラン:**
+- 1レポートあたり3-5件のアクションを生成
+- 各アクション: action, relevance, difficulty (easy/medium/hard), timeframe
+- ユーザーのプロファイル（目標・悩み）と紐づけてパーソナライズ
+- ステータス管理: pending → in_progress → completed / skipped
+
+**レポート公開:**
+- Insightと同様に visibility (private/public/anonymous) を設定可能
+- public/anonymous に設定すると `/publicReports` にコピー作成
+- POPタイムラインでInsightとレポートの両方が表示される
+
+### 5. Recommendation Agent (Phase 2)
 
 **役割:** ユーザープロファイルに基づき、次に読むべき本を推薦
 
@@ -267,11 +303,11 @@ Response: 振り返りコメント + 次へのアドバイス
 ├── ユーザー操作: UIでワンタップでステータスを切り替え
 └── Agent判断: ユーザーの発言から自動判断し update_reading_status を呼び出し
 
-どのステータスからでも専門的な質問 → BookGuide SubAgent に委譲
+どのステータスからでも専門的な質問 → BookGuide Agent (AgentTool) を呼び出し
                                     │
                                     ▼
                         ┌───────────────────────────────┐
-                        │ BookGuide SubAgent            │
+                        │ BookGuide Agent (AgentTool)    │
                         │                               │
                         │ ・専門用語の解説              │
                         │ ・時代背景の説明              │
@@ -329,10 +365,10 @@ User: 仕事の効率を上げたくて...
 User: 第1章の「パラダイム」って何ですか？
        │
        ▼
-Reading Agent: (専門的な質問を検知 → BookGuide SubAgent に委譲)
+Reading Agent: (専門的な質問を検知 → BookGuide Agent (AgentTool) を呼び出し)
        │
        ▼
-BookGuide SubAgent: (google_search で情報補強しつつ解説)
+BookGuide Agent: (google_search で情報補強しつつ解説)
 ```
 
 ### 振り返りの例（Mentor Agent）
@@ -365,6 +401,8 @@ Agent: 今週も素晴らしい読書週間でしたね！「7つの習慣」と
 | No.5 学びの言語化と記録 | Reading Agent (save_insight) | 完了 |
 | No.6 プロファイルエントリの保存 | Onboarding Agent + Reading Agent | 完了 |
 | No.11 振り返りエージェント | Mentor Agent | 完了 |
+| No.17 読書レポート生成 | Report Agent | 完了 |
+| No.18 アクションプラン | Report Agent (save_action_plan) | 完了 |
 | No.8 AIによる本の推薦 | Recommendation Agent | Phase 2 |
 
 ---
@@ -388,7 +426,7 @@ Reading Agent
     │       │
     │       ▼
     │   Tool Calls (save_insight, present_options, etc.)
-    │   または BookGuide SubAgent に委譲
+    │   または BookGuide Agent (AgentTool) を呼び出し
     │       │
     │       ▼
     │   Firestore Updates

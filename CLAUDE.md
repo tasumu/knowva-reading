@@ -8,25 +8,32 @@ Knowva（ノヴァ）は、AIによる読書体験支援アプリケーション
 
 **コアバリュー:** 読書体験を「時間とともに変化する思想の履歴」として長期保存する。完全な対話履歴をFirestoreに保存し、将来のAIモデルによる再解釈を可能にする。
 
+## 詳細ドキュメント
+
+- [要件定義](docs/requirements.md) - 機能要件、MVPゴール、ユーザージャーニー
+- [技術アーキテクチャ](docs/architecture.md) - データモデル、API設計、技術スタック
+- [エージェント設計](docs/agents.md) - 各エージェントの詳細仕様、対話フロー
+- [開発タスク](docs/tasks.md) - タスクチェックリスト、実装ファイル参照
+- [技術スタック](docs/tech-stack.md) - バージョン一覧、依存関係
+
 ## プロジェクト状態
 
-**本番環境デプロイ済み。** 以下の機能が動作する：
-- Firebase Auth（メール/パスワード）によるユーザー認証
-- 読書記録のCRUD
-- 読書振り返りエージェントとの対話（ADK + Gemini）
-- 対話からのInsight抽出・保存
-- プロファイル表示（読み取り専用、静的）
-- 音声入力対応（Web Speech API）
-- 読書前後の心境変化の可視化
+**本番環境デプロイ済み。** 主な動作機能：
+- Firebase Auth（メール/パスワード、Google、ゲスト）によるユーザー認証
+- 読書記録のCRUD、書籍検索（Google Books API + openBD）
+- 読書振り返りエージェントとの対話（ADK + Gemini）、SSEストリーミング
+- 対話からのInsight抽出・保存、読書レポート・アクションプラン生成
+- プロファイル管理、音声入力対応（Web Speech API）
+- 読書前後の心境変化の可視化、振り返りメンター
+- 公開Insight/レポート（POPタイムライン）、バッジ機能
+
+Phase 2の機能（推薦エージェント等）はコード内に`# TODO(phase2):` コメントで記録されている。
 
 **本番環境構成:**
 - フロントエンド: Firebase App Hosting（`/frontend`）
 - バックエンド: Cloud Run（`/backend/Dockerfile`）
 - データベース: Firestore
 - CI/CD: GitHub pushトリガーで自動デプロイ
-
-Phase 2の機能（プロファイル抽出エージェント、推薦エージェント等）はコード内に`# TODO(phase2):` コメントで記録されている。
-※ GCS生ログ保存は廃止（Firestoreのmessagesコレクションで対応）。SSEストリーミングは実装済み。
 
 ## ローカル開発環境の起動
 
@@ -94,99 +101,55 @@ npm run lint     # lint
 - `FIRESTORE_EMULATOR_HOST=localhost:8080`
 - `FIREBASE_AUTH_EMULATOR_HOST=localhost:9099`
 
-## ドキュメント構成
-
-- `docs/requirements.md` - 機能要件、MVPゴール、ユーザージャーニー、エージェント役割
-- `docs/architecture.md` - 技術アーキテクチャ、データモデル、技術スタック
-- `docs/tasks.md` - MVP開発タスクチェックリスト
-
-## アーキテクチャ
-
-### 三層構成
-
-1. **実行基盤（ADK + Cloud Run）** - 会話実行・ツール実行・セッション管理（ADK + Gemini API）
-2. **長期保存層（本丸）** - Firestoreによる統合管理（対話履歴 + 構造化データ）
-3. **検索基盤** - ベクトル検索・全文検索（Phase 2以降）
-
-### データ保存戦略
-
-Firestoreによる統合管理:
-- **対話履歴（messagesコレクション）:** 完全な対話ログを保持。`get_report_context()`で全メッセージを集約して再分析可能。
-- **構造化データ:** 読書記録、AI抽出のInsight、ユーザープロファイル、検索索引。
-
-※ 当初計画していたGCS生ログ保存は、Firestoreで対応可能なため廃止。スケール時のオプションとして将来検討。
-
-### Firestoreコレクション構造
-
-```
-/books/{bookId}
-/users/{userId}
-  ├── /profileHistory/{historyId}
-  ├── /readings/{readingId}
-  │   ├── /insights/{insightId}
-  │   ├── /moods/{moodId}           # 心境記録（before/after）
-  │   └── /sessions/{sessionId}
-  │       └── /messages/{messageId}
-  └── /recommendations/{recommendationId}
-```
-
 ## 技術スタック
 
 - **Agent Framework:** Agent Development Kit (ADK) + google-genai SDK
-- **LLM:** Gemini（現在 `gemini-3-flash-preview`）
+- **LLM:** Gemini（現在 `gemini-3-flash-preview`）、本番はVertex AI経由
 - **ストレージ:** Firestore（対話履歴 + 構造化データを統合管理）
 - **フロントエンド:** Next.js 16 (App Router) + TypeScript + Tailwind CSS 4
 - **バックエンド:** Python 3.12+ (FastAPI) + uv
-- **認証:** Firebase Auth（メール/パスワード）
+- **認証:** Firebase Auth（メール/パスワード、Google、匿名）
 - **インフラ（ローカル）:** Firebase Emulator Suite
 - **インフラ（本番）:** Firebase App Hosting + Cloud Run + Firestore
 - **Firebase Project ID:** `knowva-reading`
+
+バージョン詳細は [docs/tech-stack.md](docs/tech-stack.md) を参照。
 
 ## AIエージェント
 
 ### 実装済み
 1. **Reading Agent** (`agents/reading/`) - 読書対話全体を担当。読書前・中・後の対話、Insight/プロファイル自動保存
-   - **BookGuide SubAgent** (`agents/reading/book_guide/`) - 専門的な質問（概念解説、時代背景等）に対応するサブエージェント
+   - **BookGuide Agent** (`agents/reading/book_guide/`) - 専門的な質問に対応（AgentToolとして登録、結果はReading Agentに戻る）
 2. **Onboarding Agent** (`agents/onboarding/`) - 初回プロファイル作成、ユーザーの目標・興味をヒアリング
-3. **Root Orchestrator** (`agents/orchestrator/`) - 複数エージェントを統括（現在は枠組みのみ）
+3. **Mentor Agent** (`agents/mentor/`) - 週次・月次の読書活動振り返り、励ましとアドバイス
+4. **Report Agent** (`agents/report/`) - 対話履歴・Insightから読書レポート生成、アクションプラン提案
+5. **Root Orchestrator** (`agents/orchestrator/`) - 複数エージェントを統括（現在は枠組みのみ）
 
 ### Phase 2
-4. **推薦エージェント** - ユーザープロファイルに基づき次に読むべき本を提案
+- **推薦エージェント** - ユーザープロファイルに基づき次に読むべき本を提案
 
-## 追加実装済み機能
+各エージェントの詳細仕様は [docs/agents.md](docs/agents.md) を参照。
 
-### 音声入力対応（Speech to Text）
-- **技術:** Web Speech API (SpeechRecognition)
-- **実装ファイル:**
-  - `frontend/src/hooks/useSpeechRecognition.ts` - 音声認識カスタムフック
-  - `frontend/src/components/chat/ChatInput.tsx` - 音声対応チャット入力
-  - `frontend/src/components/chat/VoiceInput.tsx` - 単体音声入力コンポーネント
-- **機能:**
-  - リアルタイム文字起こし表示
-  - 日本語音声認識（`ja-JP`）
-  - 音声入力とテキスト入力の切り替え
-  - `input_type: "text" | "voice"` でメッセージに入力方法を記録
-- **注意:** Chrome/Edge推奨（Safari/Firefoxは非対応または制限あり）
+## Firestoreコレクション構造
 
-### 読書前後の心境変化の可視化
-- **バックエンド:**
-  - `backend/src/knowva/models/mood.py` - 心境データモデル（MoodMetrics, MoodData等）
-  - `backend/src/knowva/routers/moods.py` - Mood API（保存・取得・比較）
-  - `backend/src/knowva/services/firestore.py` - Firestore操作（moods関連追加）
-- **フロントエンド:**
-  - `frontend/src/components/mood/MoodForm.tsx` - 5項目のスライダー入力フォーム
-  - `frontend/src/components/mood/MoodChart.tsx` - SVGレーダーチャート+バー形式の可視化
-  - `frontend/src/app/(main)/readings/[readingId]/page.tsx` - 統合済み
-- **心境メトリクス（各1-5スケール）:**
-  - energy（活力）
-  - positivity（気分）
-  - clarity（思考の明晰さ）
-  - motivation（モチベーション）
-  - openness（開放性）
-- **API:**
-  - `POST /api/readings/{reading_id}/moods` - 心境記録を保存（before/after）
-  - `GET /api/readings/{reading_id}/moods` - 心境記録一覧
-  - `GET /api/readings/{reading_id}/moods/comparison` - 比較データ取得
+```
+/books/{bookId}
+/users/{userId}
+  ├── /profileEntries/{entryId}
+  ├── /readings/{readingId}
+  │   ├── /insights/{insightId}
+  │   ├── /moods/{moodId}
+  │   ├── /reports/{reportId}
+  │   ├── /actionPlans/{planId}
+  │   └── /sessions/{sessionId}
+  │       └── /messages/{messageId}
+  ├── /mentorFeedbacks/{feedbackId}
+  └── /recommendations/{recommendationId}    # Phase 2
+/publicInsights/{publicInsightId}
+/publicReports/{publicReportId}
+```
+
+詳細なフィールド定義は [docs/architecture.md](docs/architecture.md) を参照。
 
 ## プロジェクト構成
 
@@ -198,46 +161,55 @@ backend/
 │   ├── dependencies.py      # Firestoreクライアント
 │   ├── middleware/
 │   │   └── firebase_auth.py # Firebase Auth認証
-│   ├── models/
-│   │   ├── reading.py       # 読書記録モデル
-│   │   ├── mood.py          # 心境データモデル
+│   ├── models/              # Pydanticデータモデル
+│   │   ├── reading.py, insight.py, session.py, message.py
+│   │   ├── mood.py, report.py, action_plan.py
+│   │   ├── profile.py, onboarding.py, book.py, badge.py
 │   │   └── ...
 │   ├── routers/
-│   │   ├── readings.py      # 読書記録CRUD API
-│   │   ├── sessions.py      # 対話セッション・メッセージAPI
-│   │   └── moods.py         # 心境記録API
+│   │   ├── readings.py      # 読書記録CRUD + Insight管理
+│   │   ├── sessions.py      # 対話セッション・メッセージ（SSE）
+│   │   ├── reports.py       # レポート・アクションプラン
+│   │   ├── moods.py         # 心境記録
+│   │   ├── mentor.py        # メンター振り返り
+│   │   ├── profile.py       # プロファイル・設定
+│   │   ├── books.py         # 書籍検索・管理
+│   │   ├── timeline.py      # POPタイムライン
+│   │   ├── onboarding.py    # オンボーディング
+│   │   └── badges.py        # バッジ
 │   ├── agents/
-│   │   ├── __init__.py          # reading_agent, onboarding_agent, root_orchestrator_agent
-│   │   ├── common/
-│   │   │   └── tools.py         # 共通ツール（save_profile_entry, get_current_entries）
+│   │   ├── __init__.py
+│   │   ├── common/tools.py        # 共通ツール
 │   │   ├── reading/
-│   │   │   ├── agent.py         # Reading Agent定義
-│   │   │   ├── tools.py         # save_insight, get_reading_context, save_mood
-│   │   │   └── book_guide/      # BookGuide SubAgent
-│   │   │       ├── agent.py     # BookGuide Agent定義
-│   │   │       └── tools.py     # get_book_info
-│   │   ├── onboarding/
-│   │   │   └── agent.py         # Onboarding Agent定義
-│   │   └── orchestrator/
-│   │       └── agent.py         # Root Orchestrator定義
+│   │   │   ├── agent.py           # Reading Agent
+│   │   │   ├── tools.py
+│   │   │   └── book_guide/        # BookGuide Agent (AgentTool)
+│   │   ├── onboarding/agent.py    # Onboarding Agent
+│   │   ├── mentor/agent.py        # Mentor Agent
+│   │   ├── report/agent.py        # Report Agent
+│   │   └── orchestrator/agent.py  # Root Orchestrator
 │   └── services/
-│       └── firestore.py     # Firestore操作
+│       ├── firestore.py     # Firestore操作
+│       └── book_search.py   # 書籍検索サービス
 ├── pyproject.toml
 └── .env.example
 
 frontend/
 ├── src/
 │   ├── app/
-│   │   ├── (auth)/          # ログイン・登録
+│   │   ├── (auth)/          # ログイン・登録・オンボーディング
 │   │   └── (main)/          # 認証後ページ
-│   │       ├── home/        # 読書一覧
-│   │       ├── readings/[readingId]/  # 読書詳細・チャット
-│   │       └── profile/     # プロファイル表示
-│   ├── components/
-│   │   ├── chat/            # ChatInterface, VoiceInput
-│   │   └── mood/            # MoodForm, MoodChart
-│   ├── hooks/
-│   │   └── useSpeechRecognition.ts  # 音声認識フック
+│   │       ├── home/        # ダッシュボード
+│   │       ├── readings/    # 読書一覧・詳細・チャット・レポート
+│   │       ├── mentor/      # 振り返り
+│   │       ├── pop/         # タイムライン
+│   │       ├── quick-voice/ # ワンタップ音声入力
+│   │       └── settings/    # ユーザー設定
+│   ├── components/          # chat/, mood/, insights/, report/,
+│   │                        # action-plan/, mentor/, pop/, quick-voice/,
+│   │                        # readings/, onboarding/, auth/, badges/, ui/
+│   ├── hooks/               # useStreamingChat, useSpeechRecognition,
+│   │                        # useBookSearch, useMentorChat, useAccountLink
 │   ├── lib/                 # firebase, api, types
 │   └── providers/           # AuthProvider
 ├── package.json

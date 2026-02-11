@@ -17,7 +17,7 @@
 - [x] ユーザー認証機能（Firebase Auth メール/パスワード）
 - [x] 読書記録のCRUD（作成・表示・更新・削除）
 - [x] Reading Agent実装（読書前・中・後の対話）
-- [x] BookGuide SubAgent実装（専門的な質問への回答）
+- [x] BookGuide Agent実装（専門的な質問への回答、AgentToolとして登録）
 - [x] Onboarding Agent実装（初回プロファイル作成）
 - [x] 対話UI（テキスト入力のチャット形式）
 - [x] Insightの自動保存機能（ツール呼び出し）
@@ -222,7 +222,7 @@
 |---------|------|
 | `backend/src/knowva/main.py` | FastAPIエントリポイント |
 | `backend/src/knowva/agents/reading/agent.py` | Reading Agent |
-| `backend/src/knowva/agents/reading/book_guide/agent.py` | BookGuide SubAgent |
+| `backend/src/knowva/agents/reading/book_guide/agent.py` | BookGuide Agent (AgentTool) |
 | `backend/src/knowva/agents/onboarding/agent.py` | Onboarding Agent |
 | `backend/src/knowva/agents/mentor/agent.py` | Mentor Agent |
 | `backend/src/knowva/routers/sessions.py` | 対話セッションAPI |
@@ -231,6 +231,10 @@
 | `backend/src/knowva/routers/books.py` | 書籍管理API |
 | `backend/src/knowva/routers/timeline.py` | タイムラインAPI |
 | `backend/src/knowva/routers/mentor.py` | メンターAPI |
+| `backend/src/knowva/routers/reports.py` | レポート・アクションプランAPI |
+| `backend/src/knowva/routers/badges.py` | バッジAPI |
+| `backend/src/knowva/routers/onboarding.py` | オンボーディングAPI |
+| `backend/src/knowva/agents/report/agent.py` | Report Agent |
 | `backend/src/knowva/services/firestore.py` | Firestore操作 |
 | `backend/src/knowva/services/book_search.py` | 書籍検索サービス |
 
@@ -248,5 +252,9 @@
 | `frontend/src/components/chat/ChatInterface.tsx` | チャットUI |
 | `frontend/src/components/mood/MoodForm.tsx` | 心境入力フォーム |
 | `frontend/src/components/mood/MoodChart.tsx` | 心境可視化 |
+| `frontend/src/app/(main)/readings/[readingId]/report/page.tsx` | レポート画面 |
+| `frontend/src/app/(main)/quick-voice/page.tsx` | ワンタップ音声入力 |
+| `frontend/src/components/report/ReportView.tsx` | レポート表示 |
+| `frontend/src/components/action-plan/ActionPlanList.tsx` | アクションプラン管理 |
 | `frontend/src/hooks/useStreamingChat.ts` | SSEストリーミング処理 |
 | `frontend/src/hooks/useSpeechRecognition.ts` | 音声認識 |
