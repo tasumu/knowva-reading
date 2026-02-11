@@ -9,7 +9,7 @@ Knowvaのコア価値を実現するための技術アーキテクチャ:
 | 柱 | 説明 | 実現する技術 |
 |----|------|------------|
 | **Deep Verbalization** | 言語化支援と深掘り | Reading Agent + guided/freeformモード + Insight自動保存 |
-| **Contextual Wisdom** | 文脈によるナレッジ化 | プロファイル + Reading Context + 読書レポート生成（Phase 2.5） |
+| **Contextual Wisdom** | 文脈によるナレッジ化 | プロファイル + Reading Context + 読書レポート生成（実装済み） |
 | **Frictionless UX** | 没入を妨げない直感体験 | 音声入力（Web Speech API）+ SSEストリーミング + ワンタップUI |
 
 ### システム構成の全体像
@@ -250,7 +250,7 @@ Insightの`visibility`を変更すると：
 | GET | `/api/readings/{readingId}` | 読書詳細取得 | 実装済み |
 | PATCH | `/api/readings/{readingId}` | 読書ステータス更新 | 実装済み |
 | DELETE | `/api/readings/{readingId}` | 読書記録の削除（カスケード） | 実装済み |
-| GET | `/api/readings/{readingId}/count` | 関連データ件数取得 | 実装済み |
+| GET | `/api/readings/{readingId}/delete-preview` | 削除時の関連データ件数プレビュー | 実装済み |
 
 #### Insight管理
 
@@ -260,8 +260,10 @@ Insightの`visibility`を変更すると：
 | POST | `/api/readings/{readingId}/insights` | Insight手動作成 | 実装済み |
 | PATCH | `/api/readings/{readingId}/insights/{insightId}` | Insight更新 | 実装済み |
 | DELETE | `/api/readings/{readingId}/insights/{insightId}` | Insight削除 | 実装済み |
+| POST | `/api/readings/{readingId}/insights/delete` | Insightバルク削除 | 実装済み |
 | PATCH | `/api/readings/{readingId}/insights/{insightId}/visibility` | Insight公開設定変更 | 実装済み |
 | POST | `/api/readings/{readingId}/insights/merge` | Insightマージ | 実装済み |
+| POST | `/api/readings/{readingId}/insights/merge/preview` | マージプレビュー（LLM統合） | 実装済み |
 
 #### 書籍管理
 
@@ -281,6 +283,7 @@ Insightの`visibility`を変更すると：
 | POST | `/api/readings/{readingId}/sessions/{sessionId}/messages` | メッセージ送信（非ストリーミング） | 実装済み |
 | POST | `/api/readings/{readingId}/sessions/{sessionId}/messages/stream` | メッセージ送信（SSEストリーミング） | 実装済み |
 | GET | `/api/readings/{readingId}/sessions/{sessionId}/messages` | メッセージ履歴取得 | 実装済み |
+| POST | `/api/readings/{readingId}/sessions/{sessionId}/end` | セッション終了（要約生成） | 実装済み |
 
 #### 心境記録
 
@@ -288,6 +291,7 @@ Insightの`visibility`を変更すると：
 |--------|------|------|------|
 | POST | `/api/readings/{readingId}/moods` | 心境記録を保存 | 実装済み |
 | GET | `/api/readings/{readingId}/moods` | 心境記録一覧 | 実装済み |
+| GET | `/api/readings/{readingId}/moods/{mood_type}` | 特定の心境記録取得（before/after） | 実装済み |
 | GET | `/api/readings/{readingId}/moods/comparison` | 心境比較データ取得 | 実装済み |
 
 #### プロファイル
@@ -303,6 +307,8 @@ Insightの`visibility`を変更すると：
 | PUT | `/api/profile/name` | ニックネーム更新 | 実装済み |
 | GET | `/api/profile/settings` | ユーザー設定取得 | 実装済み |
 | PUT | `/api/profile/settings` | ユーザー設定更新 | 実装済み |
+| GET | `/api/profile/current` | ユーザープロファイル取得 | 実装済み |
+| PUT | `/api/profile/current` | ユーザープロファイル更新 | 実装済み |
 | POST | `/api/profile/chat` | Onboarding Agentとチャット | 実装済み |
 | POST | `/api/profile/chat/reset` | プロファイルチャットリセット | 実装済み |
 
@@ -321,17 +327,17 @@ Insightの`visibility`を変更すると：
 |--------|------|------|------|
 | POST | `/api/readings/{readingId}/reports/generate` | レポート生成（SSEストリーミング） | 実装済み |
 | GET | `/api/readings/{readingId}/reports` | レポート一覧取得 | 実装済み |
-| GET | `/api/readings/{readingId}/reports/{reportId}` | レポート詳細取得 | 実装済み |
+| GET | `/api/readings/{readingId}/reports/latest` | 最新レポート取得 | 実装済み |
 | PATCH | `/api/readings/{readingId}/reports/{reportId}/visibility` | レポート公開設定変更 | 実装済み |
 
 #### アクションプラン
 
 | Method | Path | 概要 | 状態 |
 |--------|------|------|------|
-| POST | `/api/readings/{readingId}/actionPlans` | アクションプラン作成 | 実装済み |
-| GET | `/api/readings/{readingId}/actionPlans` | アクションプラン一覧取得 | 実装済み |
-| PATCH | `/api/readings/{readingId}/actionPlans/{planId}` | アクションプラン更新（ステータス等） | 実装済み |
-| DELETE | `/api/readings/{readingId}/actionPlans/{planId}` | アクションプラン削除 | 実装済み |
+| POST | `/api/readings/{readingId}/action-plans` | アクションプラン作成 | 実装済み |
+| GET | `/api/readings/{readingId}/action-plans` | アクションプラン一覧取得 | 実装済み |
+| PATCH | `/api/readings/{readingId}/action-plans/{planId}` | アクションプラン更新（ステータス等） | 実装済み |
+| DELETE | `/api/readings/{readingId}/action-plans/{planId}` | アクションプラン削除 | 実装済み |
 
 #### オンボーディング
 
@@ -344,13 +350,16 @@ Insightの`visibility`を変更すると：
 
 | Method | Path | 概要 | 状態 |
 |--------|------|------|------|
-| GET | `/api/timeline` | 公開Insight・レポートのタイムライン取得 | 実装済み |
+| GET | `/api/timeline` | 公開Insightタイムライン取得 | 実装済み |
+| GET | `/api/timeline/v2` | 公開Insight・レポート統合タイムライン取得 | 実装済み |
 
 #### バッジ
 
 | Method | Path | 概要 | 状態 |
 |--------|------|------|------|
-| GET | `/api/badges` | バッジ一覧取得 | 実装済み |
+| GET | `/api/badges` | バッジ定義一覧取得 | 実装済み |
+| GET | `/api/badges/user` | ユーザーの獲得バッジ取得 | 実装済み |
+| POST | `/api/badges/check` | バッジ判定・付与 | 実装済み |
 
 #### 推薦
 
