@@ -11,7 +11,9 @@
 | UIライブラリ | React | 19.x | Server/Client Components |
 | スタイリング | Tailwind CSS | 4.x | `@import "tailwindcss"` 形式 |
 | ユーティリティ | use-debounce | 10.x | デバウンス処理 |
-| 認証 | Firebase Auth SDK | 12.x | メール/パスワード認証 |
+| PWA | @ducanh2912/next-pwa | 10.x | オフライン対応・インストール可能 |
+| 画像最適化 | sharp | 0.34+ | Next.js画像最適化 |
+| 認証 | Firebase Auth SDK | 12.x | メール/パスワード、Google、匿名認証 |
 
 ### 主要な設定
 
@@ -34,6 +36,7 @@
 | パッケージ管理 | uv | latest | 高速なパッケージマネージャ |
 | バリデーション | Pydantic | 2.x | `pydantic-settings`含む |
 | ストリーミング | sse-starlette | 2.x | Server-Sent Events |
+| レート制限 | slowapi | 0.1.9+ | APIレートリミッティング |
 
 ### 開発ツール
 
@@ -42,6 +45,7 @@
 | Ruff | 0.5+ | Linter / Formatter |
 | pytest | 8.x | テスト |
 | pytest-asyncio | 0.23+ | 非同期テスト |
+| httpx | 0.27+ | HTTPクライアント（テスト用） |
 
 ### Ruff設定
 
@@ -110,6 +114,7 @@ select = ["E", "F", "I", "N", "W"]
 ```json
 {
   "dependencies": {
+    "@ducanh2912/next-pwa": "^10.2.9",
     "firebase": "^12.8.0",
     "next": "16.1.4",
     "react": "19.2.3",
@@ -123,6 +128,7 @@ select = ["E", "F", "I", "N", "W"]
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.1.4",
+    "sharp": "^0.34.5",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
@@ -145,12 +151,14 @@ dependencies = [
     "google-genai>=1.0.0",
     "python-dotenv>=1.0.0",
     "sse-starlette>=2.0.0",
+    "slowapi>=0.1.9",
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.23.0",
+    "httpx>=0.27.0",
     "ruff>=0.5.0",
 ]
 ```

@@ -93,7 +93,7 @@ BookGuide Agent（AgentToolパターン）:
 
 データ保存:
 - 対話はすべて `messages` コレクションに保存
-- Insight、Mood、プロファイルは `readings`, `insights`, `moods`, `profileHistory` に構造化データとして保存
+- Insight、Mood、プロファイルは `readings`, `insights`, `moods`, `profileEntries` に構造化データとして保存
 
 その他のエージェント:
 読書の対話以外の場面では別のAgentを作成しています。各Agentは一部のツールを共有しています
