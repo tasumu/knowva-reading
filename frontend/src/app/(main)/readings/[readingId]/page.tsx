@@ -565,7 +565,7 @@ export default function ReadingDetailPage() {
             </h2>
           </div>
           <div className="flex items-center gap-2">
-            {insights.length > 1 && !isAddingInsight && (
+            {insights.length >= 1 && !isAddingInsight && (
               <button
                 onClick={(e) => {
                   e.preventDefault();
@@ -578,7 +578,7 @@ export default function ReadingDetailPage() {
                 className={`px-3 py-1 text-sm rounded-lg transition-colors ${
                   selectionMode
                     ? "bg-blue-100 text-blue-700"
-                    : "text-purple-600 bg-purple-50 hover:bg-purple-100"
+                    : "text-purple-600 bg-purple-100 hover:bg-purple-200"
                 }`}
               >
                 {selectionMode ? "選択モード終了" : "整理"}
@@ -590,7 +590,7 @@ export default function ReadingDetailPage() {
                   e.preventDefault();
                   setIsAddingInsight(true);
                 }}
-                className="px-3 py-1 text-sm text-purple-600 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors"
+                className="px-3 py-1 text-sm text-purple-600 bg-purple-100 rounded-lg hover:bg-purple-200 transition-colors"
               >
                 + 追加
               </button>

@@ -317,7 +317,7 @@ export default function SettingsPage() {
           <div>
             <h2 className="text-lg font-semibold text-gray-900">あなたについて</h2>
             <p className="text-sm text-gray-500 mt-1">
-              AIがより適切な対話をするための情報です
+              AIがより適切な対話・分析をするための情報です
             </p>
           </div>
           <div className="flex items-center gap-2">

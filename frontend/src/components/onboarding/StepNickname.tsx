@@ -13,7 +13,7 @@ export function StepNickname({ value, onChange }: StepNicknameProps) {
           ニックネームを教えてください
         </h2>
         <p className="text-sm text-gray-600">
-          Knowvaでの表示名になります。後から変更できます。
+          Knowvaでの表示名になります。後から変更できます。ひとまず空欄でもかまいません。
         </p>
       </div>
       <input

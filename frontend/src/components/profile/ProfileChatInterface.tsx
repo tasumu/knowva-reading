@@ -63,7 +63,7 @@ export function ProfileChatInterface({ onEntryAdded }: Props) {
         {messages.length === 0 && (
           <div className="text-center text-gray-400 py-4">
             <p className="text-sm">
-              目標や興味について自由に話してください
+              会話に基づき項目を自動作成します（後から手動編集も可能です）
             </p>
           </div>
         )}
