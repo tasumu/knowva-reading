@@ -132,7 +132,7 @@ export default function HomePage() {
   return (
     <div className="space-y-6">
       {/* ワンタップ音声入力FAB（表示時） */}
-      {fabPosition && fabPosition !== "none" && (
+      {fabPosition && fabPosition !== "none" && readingInProgress.length > 0 && (
         <QuickVoiceFAB
           readings={readingInProgress}
           position={fabPosition}
@@ -141,7 +141,7 @@ export default function HomePage() {
       )}
 
       {/* FAB非表示時の「表示」ボタン */}
-      {fabPosition === "none" && (
+      {fabPosition === "none" && readingInProgress.length > 0 && (
         <button
           onClick={handleFabToggle}
           className="fixed bottom-20 md:bottom-6 left-6 z-[9999] text-xs text-gray-400 hover:text-gray-600 bg-white/80 backdrop-blur-sm px-2 py-1 rounded shadow-sm transition-colors"
