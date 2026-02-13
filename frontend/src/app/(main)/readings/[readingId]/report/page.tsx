@@ -276,11 +276,11 @@ export default function ReportPage() {
         </div>
       )}
 
-      {/* おすすめのアクションプラン */}
+      {/* アクションプラン */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-2">
           <h2 className="text-lg font-semibold text-gray-900">
-            おすすめのアクションプラン
+            アクションプラン
             {actionPlans.length > 0 && (
               <span className="ml-2 text-sm font-normal text-gray-500">
                 ({actionPlans.filter((p) => p.status === "completed").length}/

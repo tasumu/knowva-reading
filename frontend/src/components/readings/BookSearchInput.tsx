@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useBookSearch } from "@/hooks/useBookSearch";
+import Image from "next/image";
 import type { BookSearchResult } from "@/lib/types";
 
 interface Props {
@@ -84,9 +85,11 @@ export function BookSearchInput({ onSelect, onManualEntry }: Props) {
               >
                 <div className="flex gap-3">
                   {book.thumbnail_url ? (
-                    <img
+                    <Image
                       src={book.thumbnail_url}
                       alt=""
+                      width={40}
+                      height={56}
                       className="w-10 h-14 object-cover rounded flex-shrink-0"
                     />
                   ) : (

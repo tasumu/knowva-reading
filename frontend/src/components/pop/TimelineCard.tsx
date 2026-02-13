@@ -1,3 +1,4 @@
+import Image from "next/image";
 import type { ReadingStatus, TimelineInsight } from "@/lib/types";
 
 interface TimelineCardProps {
@@ -44,9 +45,11 @@ export default function TimelineCard({ insight }: TimelineCardProps) {
       {/* ヘッダー: 本の情報 */}
       <div className="flex items-start gap-3 mb-3">
         {insight.book.cover_url ? (
-          <img
+          <Image
             src={insight.book.cover_url}
             alt=""
+            width={40}
+            height={56}
             className="flex-shrink-0 w-10 h-14 object-cover rounded"
           />
         ) : (

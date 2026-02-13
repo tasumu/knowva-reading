@@ -8,6 +8,12 @@ const withPWA = withPWAInit({
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "books.google.com" },
+      { protocol: "https", hostname: "cover.openbd.jp" },
+    ],
+  },
   async rewrites() {
     const backendUrl = process.env.BACKEND_URL || "http://localhost:8000";
     return [

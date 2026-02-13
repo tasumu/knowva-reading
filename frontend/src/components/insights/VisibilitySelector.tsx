@@ -54,6 +54,17 @@ export default function VisibilitySelector({
     }
   };
 
+  const getSelectStyle = (value: InsightVisibility) => {
+    switch (value) {
+      case "private":
+        return "bg-gray-100 text-gray-700 border-gray-300";
+      case "public":
+        return "bg-green-50 text-green-700 border-green-300";
+      case "anonymous":
+        return "bg-blue-50 text-blue-700 border-blue-300";
+    }
+  };
+
   const getButtonStyle = (value: InsightVisibility) => {
     const isSelected = currentVisibility === value;
     const isLoading = updatingValue === value;
@@ -77,7 +88,25 @@ export default function VisibilitySelector({
   };
 
   return (
-    <div className="inline-flex rounded-lg border border-gray-200 overflow-hidden">
+    <>
+      {/* モバイル用プルダウン */}
+      <select
+        value={currentVisibility}
+        onChange={(e) => handleChange(e.target.value as InsightVisibility)}
+        disabled={disabled || isUpdating}
+        className={`md:hidden text-xs font-medium rounded-lg border px-2 py-1 ${getSelectStyle(currentVisibility)} ${
+          disabled || isUpdating ? "cursor-not-allowed opacity-60" : ""
+        }`}
+      >
+        {VISIBILITY_OPTIONS.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+
+      {/* PC用ボタングループ */}
+      <div className="hidden md:inline-flex rounded-lg border border-gray-200 overflow-hidden">
       {VISIBILITY_OPTIONS.map((option, index) => (
         <button
           key={option.value}
@@ -117,5 +146,6 @@ export default function VisibilitySelector({
         </button>
       ))}
     </div>
+    </>
   );
 }

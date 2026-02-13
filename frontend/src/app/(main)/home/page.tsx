@@ -8,6 +8,7 @@ import { QuickVoiceFAB } from "@/components/quick-voice/QuickVoiceFAB";
 import { BadgeSection } from "@/components/badges/BadgeSection";
 import { HomeActionPlanSection } from "@/components/home/HomeActionPlanSection";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function HomePage() {
   const [loading, setLoading] = useState(true);
@@ -205,12 +206,14 @@ export default function HomePage() {
                     href={`/readings/${reading.id}`}
                     className="flex-shrink-0 w-28 group"
                   >
-                    <div className="w-full aspect-[2/3] bg-gray-100 rounded-lg overflow-hidden shadow-sm group-hover:shadow-md transition-shadow">
+                    <div className="relative w-full aspect-[2/3] bg-gray-100 rounded-lg overflow-hidden shadow-sm group-hover:shadow-md transition-shadow">
                       {reading.book.cover_url ? (
-                        <img
+                        <Image
                           src={reading.book.cover_url}
                           alt=""
-                          className="w-full h-full object-cover"
+                          fill
+                          sizes="112px"
+                          className="object-cover"
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import {
   apiClient,
   getActionPlans,
@@ -71,6 +72,7 @@ export default function ReadingDetailPage() {
   const [selectedInsightIds, setSelectedInsightIds] = useState<Set<string>>(new Set());
   const [showInsightDeleteConfirm, setShowInsightDeleteConfirm] = useState(false);
   const [showMergeModal, setShowMergeModal] = useState(false);
+  const [deletingInsight, setDeletingInsight] = useState<Insight | null>(null);
 
   // アクションプラン編集・削除の状態
   const [isAddingPlan, setIsAddingPlan] = useState(false);
@@ -259,6 +261,18 @@ export default function ReadingDetailPage() {
     }
   };
 
+  // 単一Insight削除実行
+  const handleDeleteSingleInsight = async () => {
+    if (!deletingInsight) return;
+    try {
+      await deleteInsights(readingId, [deletingInsight.id]);
+      setInsights((prev) => prev.filter((i) => i.id !== deletingInsight.id));
+      setDeletingInsight(null);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "削除に失敗しました");
+    }
+  };
+
   // Insightマージ完了
   const handleMergeComplete = (mergedInsight: Insight) => {
     // 元のInsightを削除し、新しいマージ済みInsightを追加
@@ -335,9 +349,11 @@ export default function ReadingDetailPage() {
           <div className="flex items-start justify-between">
             <div className="flex items-start gap-4 flex-1">
               {reading.book.cover_url ? (
-                <img
+                <Image
                   src={reading.book.cover_url}
                   alt=""
+                  width={64}
+                  height={96}
                   className="w-16 h-24 object-cover rounded shadow-sm flex-shrink-0"
                 />
               ) : (
@@ -549,17 +565,6 @@ export default function ReadingDetailPage() {
             </h2>
           </div>
           <div className="flex items-center gap-2">
-            {!selectionMode && !isAddingInsight && !editingInsight && (
-              <button
-                onClick={(e) => {
-                  e.preventDefault();
-                  setIsAddingInsight(true);
-                }}
-                className="px-3 py-1 text-sm text-purple-600 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors"
-              >
-                + 追加
-              </button>
-            )}
             {insights.length > 1 && !isAddingInsight && (
               <button
                 onClick={(e) => {
@@ -576,7 +581,18 @@ export default function ReadingDetailPage() {
                     : "text-purple-600 bg-purple-50 hover:bg-purple-100"
                 }`}
               >
-                {selectionMode ? "選択モード終了" : "まとめて整理する"}
+                {selectionMode ? "選択モード終了" : "整理"}
+              </button>
+            )}
+            {!selectionMode && !isAddingInsight && !editingInsight && (
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  setIsAddingInsight(true);
+                }}
+                className="px-3 py-1 text-sm text-purple-600 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors"
+              >
+                + 追加
               </button>
             )}
           </div>
@@ -637,6 +653,7 @@ export default function ReadingDetailPage() {
                     isSelected={selectedInsightIds.has(insight.id)}
                     onSelect={handleSelectInsight}
                     onEdit={selectionMode ? undefined : setEditingInsight}
+                    onDelete={selectionMode ? undefined : setDeletingInsight}
                   />
                 )
               )}
@@ -665,7 +682,7 @@ export default function ReadingDetailPage() {
               )}
             </h2>
           </div>
-          {actionPlans.length > 0 && !isAddingPlan && !editingPlan && (
+          {!isAddingPlan && !editingPlan && (
             <button
               onClick={(e) => {
                 e.preventDefault();
@@ -773,6 +790,24 @@ export default function ReadingDetailPage() {
         variant="danger"
         onConfirm={handleDeleteInsights}
         onCancel={() => setShowInsightDeleteConfirm(false)}
+      />
+
+      {/* 単一Insight削除確認ダイアログ */}
+      <ConfirmDialog
+        isOpen={!!deletingInsight}
+        title="この気づきを削除しますか？"
+        message={
+          <p>
+            この気づきが削除されます。
+            <br />
+            この操作は取り消せません。
+          </p>
+        }
+        confirmLabel="削除する"
+        cancelLabel="キャンセル"
+        variant="danger"
+        onConfirm={handleDeleteSingleInsight}
+        onCancel={() => setDeletingInsight(null)}
       />
 
       {/* Insightマージモーダル */}

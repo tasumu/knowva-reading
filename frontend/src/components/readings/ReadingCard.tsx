@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Reading } from "@/lib/types";
 
 interface Props {
@@ -26,9 +27,11 @@ export function ReadingCard({ reading }: Props) {
     >
       <div className="flex gap-3">
         {reading.book.cover_url ? (
-          <img
+          <Image
             src={reading.book.cover_url}
             alt=""
+            width={48}
+            height={64}
             className="w-12 h-16 object-cover rounded flex-shrink-0"
           />
         ) : (

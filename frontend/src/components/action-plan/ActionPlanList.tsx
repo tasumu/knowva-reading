@@ -125,64 +125,66 @@ export function ActionPlanList({
                     : "bg-white border-gray-200"
               }`}
             >
-              <div className="flex items-start gap-3">
-                {/* チェックボックス風の状態表示 */}
-                <button
-                  onClick={() =>
-                    handleStatusChange(
-                      plan,
-                      isCompleted ? "pending" : "completed"
-                    )
-                  }
-                  disabled={updating === plan.id}
-                  className={`mt-0.5 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
-                    isCompleted
-                      ? "bg-green-500 border-green-500 text-white"
-                      : "border-gray-300 hover:border-green-400"
-                  } ${updating === plan.id ? "opacity-50" : ""}`}
-                >
-                  {isCompleted && (
-                    <svg
-                      className="w-3 h-3"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={3}
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>
-                  )}
-                </button>
-
-                <div className="flex-1">
-                  <p
-                    className={`text-sm font-medium ${isCompleted ? "line-through text-gray-500" : "text-gray-900"}`}
+              {/* 上段: メタデータ・ボタン */}
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  {/* チェックボックス風の状態表示 */}
+                  <button
+                    onClick={() =>
+                      handleStatusChange(
+                        plan,
+                        isCompleted ? "pending" : "completed"
+                      )
+                    }
+                    disabled={updating === plan.id}
+                    className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors flex-shrink-0 ${
+                      isCompleted
+                        ? "bg-green-500 border-green-500 text-white"
+                        : "border-gray-300 hover:border-green-400"
+                    } ${updating === plan.id ? "opacity-50" : ""}`}
                   >
-                    {plan.action}
-                  </p>
-                  {plan.relevance && (
-                    <p className="text-xs text-gray-500 mt-1">{plan.relevance}</p>
-                  )}
-
-                  <div className="flex items-center gap-2 mt-2">
-                    <span
-                      className={`text-xs px-2 py-0.5 rounded-full ${difficultyInfo.color}`}
-                    >
-                      {difficultyInfo.label}
-                    </span>
-                    {plan.timeframe && (
-                      <span className="text-xs text-gray-400">
-                        {plan.timeframe}
-                      </span>
+                    {isCompleted && (
+                      <svg
+                        className="w-3 h-3"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={3}
+                          d="M5 13l4 4L19 7"
+                        />
+                      </svg>
                     )}
-                  </div>
+                  </button>
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded-full ${difficultyInfo.color}`}
+                  >
+                    {difficultyInfo.label}
+                  </span>
+                  {plan.timeframe && (
+                    <span className="text-xs text-gray-400">
+                      {plan.timeframe}
+                    </span>
+                  )}
+                  {/* ステータス変更ドロップダウン */}
+                  <select
+                    value={plan.status}
+                    onChange={(e) =>
+                      handleStatusChange(plan, e.target.value as ActionPlanStatus)
+                    }
+                    disabled={updating === plan.id}
+                    className="text-xs border border-gray-200 rounded px-2 py-1 bg-white"
+                  >
+                    {STATUS_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-
-                {/* アクションボタン */}
                 <div className="flex items-center gap-1">
                   {onEdit && (
                     <button
@@ -227,23 +229,16 @@ export function ActionPlanList({
                     </button>
                   )}
                 </div>
-
-                {/* ステータス変更ドロップダウン */}
-                <select
-                  value={plan.status}
-                  onChange={(e) =>
-                    handleStatusChange(plan, e.target.value as ActionPlanStatus)
-                  }
-                  disabled={updating === plan.id}
-                  className="text-xs border border-gray-200 rounded px-2 py-1 bg-white"
-                >
-                  {STATUS_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
               </div>
+              {/* 下段: テキスト内容 */}
+              <p
+                className={`text-sm font-medium ${isCompleted ? "line-through text-gray-500" : "text-gray-900"}`}
+              >
+                {plan.action}
+              </p>
+              {plan.relevance && (
+                <p className="text-xs text-gray-500 mt-1">{plan.relevance}</p>
+              )}
             </div>
           );
         })}

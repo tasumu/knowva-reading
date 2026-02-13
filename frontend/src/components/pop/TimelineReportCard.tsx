@@ -1,3 +1,4 @@
+import Image from "next/image";
 import type { ReadingStatus, TimelineReport } from "@/lib/types";
 
 interface TimelineReportCardProps {
@@ -32,9 +33,11 @@ export default function TimelineReportCard({
       {/* ヘッダー: 本の情報 */}
       <div className="flex items-start gap-3 mb-3">
         {report.book.cover_url ? (
-          <img
+          <Image
             src={report.book.cover_url}
             alt=""
+            width={40}
+            height={56}
             className="flex-shrink-0 w-10 h-14 object-cover rounded"
           />
         ) : (

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { apiClient, createBook } from "@/lib/api";
 import type { Reading, BookSearchResult } from "@/lib/types";
+import Image from "next/image";
 import { BookSearchInput } from "./BookSearchInput";
 
 interface Props {
@@ -124,9 +125,11 @@ export function ReadingForm({ onCreated, onCancel }: Props) {
           <div className="p-3 bg-gray-50 rounded-md">
             <div className="flex gap-3">
               {selectedBook.thumbnail_url ? (
-                <img
+                <Image
                   src={selectedBook.thumbnail_url}
                   alt=""
+                  width={56}
+                  height={80}
                   className="w-14 h-20 object-cover rounded flex-shrink-0"
                 />
               ) : (
