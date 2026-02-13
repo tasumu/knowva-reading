@@ -245,7 +245,7 @@ export function ChatInterface({
     <div className="flex flex-col h-full">
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.length === 0 && !isStreaming && !isInitializing && (
-          <div className="text-center text-gray-400 py-8">
+          <div className="text-center text-gray-400 pt-12 pb-8">
             <p>AIとの対話を始めましょう</p>
             <p className="text-sm mt-1">
               読んだ本について感じたことを自由に話してください

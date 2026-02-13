@@ -152,6 +152,8 @@ export default function ChatPage() {
             </span>
           )}
         </div>
+        {/* 音声メモボタン */}
+        <MicFAB readingId={readingId} sessionId={sessionId} />
       </div>
 
       <ChatInterface
@@ -163,8 +165,6 @@ export default function ChatPage() {
         onProfileEntrySaved={handleProfileEntrySaved}
       />
 
-      {/* 音声メモFAB */}
-      <MicFAB readingId={readingId} sessionId={sessionId} />
     </div>
   );
 }
