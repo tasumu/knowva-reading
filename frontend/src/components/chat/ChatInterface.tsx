@@ -84,7 +84,21 @@ export function ChatInterface({
           `/api/readings/${readingId}/sessions/${sessionId}/messages`
         );
         setMessages(data);
-        
+
+        // 最後のAIメッセージに選択肢データがあれば復元する
+        // （クイック音声メモからの遷移やページリロード時に選択肢を再表示）
+        if (data.length > 0) {
+          const lastMsg = data[data.length - 1];
+          if (lastMsg.role === "assistant" && lastMsg.options) {
+            setCurrentOptions({
+              prompt: lastMsg.options.prompt,
+              options: lastMsg.options.options,
+              allowMultiple: lastMsg.options.allow_multiple,
+              allowFreeform: lastMsg.options.allow_freeform,
+            });
+          }
+        }
+
         // メッセージがない場合、AIから始める設定なら自動でセッション初期化を行う
         if (data.length === 0 && initiator === "ai") {
           initializeSession();

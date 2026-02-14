@@ -231,6 +231,8 @@ async def send_message_stream(
         accumulated_text = ""
         # 進行中のツール呼び出しを追跡
         pending_tool_calls: dict[str, str] = {}  # tool_id -> tool_name
+        # present_optionsのデータを保持（メッセージに永続化するため）
+        options_data: dict | None = None
 
         # メッセージ開始イベント
         yield ServerSentEvent(data=json.dumps({"message_id": message_id}), event="message_start")
@@ -272,19 +274,18 @@ async def send_message_stream(
                             # present_optionsツールの場合は特別なSSEイベントを送信
                             if tool_name == "present_options" and isinstance(result, dict):
                                 if result.get("status") == "options_presented":
-                                    yield ServerSentEvent(
-                                        data=json.dumps(
-                                            {
-                                                "prompt": result.get("prompt", ""),
-                                                "options": result.get("options", []),
-                                                "allow_multiple": result.get(
-                                                    "allow_multiple", True
-                                                ),
-                                                "allow_freeform": result.get(
-                                                    "allow_freeform", True
-                                                ),
-                                            }
+                                    options_data = {
+                                        "prompt": result.get("prompt", ""),
+                                        "options": result.get("options", []),
+                                        "allow_multiple": result.get(
+                                            "allow_multiple", True
                                         ),
+                                        "allow_freeform": result.get(
+                                            "allow_freeform", True
+                                        ),
+                                    }
+                                    yield ServerSentEvent(
+                                        data=json.dumps(options_data),
                                         event="options_request",
                                     )
 
@@ -339,11 +340,18 @@ async def send_message_stream(
             yield ServerSentEvent(data=json.dumps({"delta": accumulated_text}), event="text_delta")
 
         # AIの応答をFirestoreに保存
+        message_data: dict = {
+            "role": "assistant",
+            "message": accumulated_text,
+            "input_type": "text",
+        }
+        if options_data:
+            message_data["options"] = options_data
         ai_message = await firestore.save_message(
             user_id=user["uid"],
             reading_id=reading_id,
             session_id=session_id,
-            data={"role": "assistant", "message": accumulated_text, "input_type": "text"},
+            data=message_data,
         )
 
         # テキスト完了イベント
@@ -405,6 +413,8 @@ async def init_session(
         message_id = f"msg_{session_id}_{int(time.time() * 1000)}"
         accumulated_text = ""
         pending_tool_calls: dict[str, str] = {}
+        # present_optionsのデータを保持（メッセージに永続化するため）
+        options_data: dict | None = None
 
         yield ServerSentEvent(data=json.dumps({"message_id": message_id}), event="message_start")
 
@@ -440,19 +450,18 @@ async def init_session(
 
                             if tool_name == "present_options" and isinstance(result, dict):
                                 if result.get("status") == "options_presented":
-                                    yield ServerSentEvent(
-                                        data=json.dumps(
-                                            {
-                                                "prompt": result.get("prompt", ""),
-                                                "options": result.get("options", []),
-                                                "allow_multiple": result.get(
-                                                    "allow_multiple", True
-                                                ),
-                                                "allow_freeform": result.get(
-                                                    "allow_freeform", True
-                                                ),
-                                            }
+                                    options_data = {
+                                        "prompt": result.get("prompt", ""),
+                                        "options": result.get("options", []),
+                                        "allow_multiple": result.get(
+                                            "allow_multiple", True
                                         ),
+                                        "allow_freeform": result.get(
+                                            "allow_freeform", True
+                                        ),
+                                    }
+                                    yield ServerSentEvent(
+                                        data=json.dumps(options_data),
                                         event="options_request",
                                     )
 
@@ -503,11 +512,18 @@ async def init_session(
             yield ServerSentEvent(data=json.dumps({"delta": accumulated_text}), event="text_delta")
 
         # AIの初期メッセージをFirestoreに保存
+        message_data: dict = {
+            "role": "assistant",
+            "message": accumulated_text,
+            "input_type": "text",
+        }
+        if options_data:
+            message_data["options"] = options_data
         ai_message = await firestore.save_message(
             user_id=user["uid"],
             reading_id=reading_id,
             session_id=session_id,
-            data={"role": "assistant", "message": accumulated_text, "input_type": "text"},
+            data=message_data,
         )
 
         yield ServerSentEvent(data=json.dumps({"text": accumulated_text}), event="text_done")

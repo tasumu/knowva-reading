@@ -77,12 +77,20 @@ export interface Session {
   summary?: string;
 }
 
+export interface MessageOptions {
+  prompt: string;
+  options: string[];
+  allow_multiple: boolean;
+  allow_freeform: boolean;
+}
+
 export interface Message {
   id: string;
   role: "user" | "assistant";
   message: string;
   input_type: "text" | "voice";
   created_at: string;
+  options?: MessageOptions;
 }
 
 export type InsightVisibility = "private" | "public" | "anonymous";
