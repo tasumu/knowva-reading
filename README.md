@@ -2,12 +2,9 @@
 
 読書体験を、知恵に変える。
 
-<!-- 📸 画像①: ヒーロー画像
-  推奨: アプリのダッシュボード or 読書一覧画面のスクリーンショット。
-  スマホとPCを並べたモックアップ画像だと訴求力が高いです。
-  横幅 1200px 程度、docs/images/hero.png として配置。
-  例: ![Knowva](docs/images/hero.png)
--->
+<p align="center">
+  <img src="docs/images/hero.gif" width="800" alt="Knowva - ホーム画面・AIとの対話・気づき一覧">
+</p>
 
 ## Knowva とは
 
@@ -29,40 +26,42 @@ AIが「具体的にどの場面が印象に残った？」「それって今の
 
 ### 読み返すと変化がわかる
 
-対話から抽出したInsight（気づき）を保存しているので、同じ本を時間をおいて読み返すと、前回と今回で自分の感じ方がどう変わったか比べられます。
+対話から抽出したInsight（気づき）を保存しているので、同じ本を時間をおいて読み返すと、前回と今回で自分の感じ方がどう変わったか比べられます。似た気づき同士をAIがマージして整理することもできます。
 
-<!-- 📸 画像②: 主要機能のスクリーンショット（2〜4枚）
-  推奨素材:
-  - AI との対話画面（チャット UI）
-  - Insight 一覧画面
-  - 読書レポート画面
-  - 心境変化レーダーチャート
-  各 600px 程度、docs/images/ 配下に配置。
-  例:
-  | ![対話画面](docs/images/chat.png) | ![レポート](docs/images/report.png) |
-  |:--:|:--:|
-  | AI との対話 | 読書レポート |
-
-  | ![Insight](docs/images/insights.png) | ![心境変化](docs/images/mood.png) |
-  |:--:|:--:|
-  | Insight 一覧 | 心境変化チャート |
--->
-
-<!-- 📸 画像③: AI エージェントとの対話デモ
-  推奨素材:
-  - Reading Agent との対話のやりとりが分かるデモ動画（GIF 推奨、30秒〜1分程度）
-    または、対話が 2〜3 往復見えるスクリーンショット
-  - docs/images/demo.gif として配置
-  例: ![Reading Agent との対話デモ](docs/images/demo.gif)
--->
+<p align="center">
+  <img src="docs/images/insight-list.jpg" height="400" alt="気づき一覧">
+  &nbsp;&nbsp;
+  <img src="docs/images/insight-merge.jpg" height="400" alt="気づきのマージ">
+</p>
+<p align="center">
+  <sub>気づき一覧 &nbsp;|&nbsp; AIによるマージ</sub>
+</p>
 
 ## その他の特徴
+
+<p align="center">
+  <img src="docs/images/voice-memo.jpg" width="200" alt="音声メモ">
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="docs/images/pop-timeline.jpg" width="200" alt="POPタイムライン">
+</p>
+<p align="center">
+  <sub>音声メモ &nbsp;|&nbsp; POP タイムライン</sub>
+</p>
 
 - 読書レポートとアクションプランの生成
 - 読書前後の心境変化をレーダーチャートで表示
 - 週次・月次のメンター振り返り
 - Insightやレポートを公開・匿名で共有できるタイムライン（POP）
 - 読書活動に応じたバッジ
+
+<p align="center">
+  <img src="docs/images/pc-profile.png" height="500" alt="プロファイル">
+  &nbsp;&nbsp;
+  <img src="docs/images/pc-reading-report.png" height="500" alt="読書レポート">
+</p>
+<p align="center">
+  <sub>プロファイル &nbsp;|&nbsp; プロファイルに基づく読書レポート（PC表示）</sub>
+</p>
 
 ## AI エージェント構成（開発者向け）
 
