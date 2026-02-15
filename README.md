@@ -5,7 +5,7 @@
 <p align="center">
   <img src="docs/images/home-dashboard.png" height="400" alt="ホーム画面">
   &nbsp;&nbsp;
-  <img src="docs/images/chat-demo.gif" height="420" alt="AIとの対話デモ">
+  <img src="docs/images/chat-demo-v2.gif" height="420" alt="AIとの対話デモ">
   &nbsp;&nbsp;
   <img src="docs/images/insight-list.png" height="400" alt="気づき一覧">
 </p>
